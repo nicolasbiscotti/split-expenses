@@ -1,3 +1,5 @@
+import "./style.css";
+
 export function setupExpenseForm(element: HTMLDivElement) {
   const users = [
     { id: "1", name: "Fer" },
