@@ -2,6 +2,7 @@ import type AppStore from "./store";
 import renderDashboard from "./dashboard/dashboard";
 import renderExpenseForm from "./expenseForm/expenseForm";
 import renderPaymentForm from "./paymentForm/paymentForm";
+import renderHistory from "./history/history";
 
 export default function render(currentView: string, store: AppStore) {
   const app = document.getElementById("app")!;
