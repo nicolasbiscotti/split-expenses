@@ -1,16 +1,10 @@
-import "./style.css";
+import type AppStore from "../store";
 
-export function setupExpenseForm(element: HTMLDivElement) {
-  const users = [
-    { id: "1", name: "Fer" },
-    { id: "2", name: "Seba" },
-    { id: "3", name: "Nata" },
-  ];
-
-  const setForm = () => {
-    element.className = "bg-white rounded-lg shadow p-6";
-
-    element.innerHTML = `<h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
+export default function renderExpenseForm(store: AppStore) {
+  const users = store.getUsers();
+  return `
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
           <form id="expense-form" class="space-y-4">
             <div>
               <label class="block text-sm font-medium mb-1">Quién pagó</label>
@@ -32,8 +26,7 @@ export function setupExpenseForm(element: HTMLDivElement) {
               <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded font-medium">Guardar</button>
               <button type="button" onclick="setView('dashboard')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium">Cancelar</button>
             </div>
-          </form>`;
-  };
-
-  setForm();
+          </form>
+        </div>
+      `;
 }
