@@ -24,28 +24,28 @@ export default class AppStore {
     return [...this.payments];
   }
 
-  addExpense(expense: Expense) {
+  addExpense(expense: Expense, currentView: string, store: AppStore) {
     this.expenses.push(expense);
     this.saveToStorage();
-    this.notify();
+    this.notify(currentView, store);
   }
 
-  deleteExpense(id: string) {
+  deleteExpense(id: string, currentView: string, store: AppStore) {
     this.expenses = this.expenses.filter((e) => e.id !== id);
     this.saveToStorage();
-    this.notify();
+    this.notify(currentView, store);
   }
 
-  addPayment(payment: Payment) {
+  addPayment(payment: Payment, currentView: string, store: AppStore) {
     this.payments.push(payment);
     this.saveToStorage();
-    this.notify();
+    this.notify(currentView, store);
   }
 
-  deletePayment(id: string) {
+  deletePayment(id: string, currentView: string, store: AppStore) {
     this.payments = this.payments.filter((p) => p.id !== id);
     this.saveToStorage();
-    this.notify();
+    this.notify(currentView, store);
   }
 
   saveToStorage() {
@@ -85,14 +85,17 @@ export default class AppStore {
     }
   }
 
-  subscribe(listener: any) {
+  subscribe(listener: (currentView: string, store: AppStore) => any) {
     this.listeners.push(listener);
     return () => {
       this.listeners = this.listeners.filter((l: any) => l !== listener);
     };
   }
 
-  notify() {
-    this.listeners.forEach((listener: () => any) => listener());
+  notify(currentView: string, store: AppStore) {
+    this.listeners.forEach(
+      (listener: (currentView: string, store: AppStore) => any) =>
+        listener(currentView, store)
+    );
   }
 }

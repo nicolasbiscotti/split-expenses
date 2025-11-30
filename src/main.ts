@@ -15,17 +15,13 @@ window.setView = (view: string) => {
 
 window.deleteExpense = (id: string) => {
   if (confirm("¿Eliminar este gasto?")) {
-    store.deleteExpense(id);
-    currentView = "history";
-    render(currentView, store);
+    store.deleteExpense(id, "history", store);
   }
 };
 
 window.deletePayment = (id: string) => {
   if (confirm("¿Eliminar este pago?")) {
-    store.deletePayment(id);
-    currentView = "history";
-    render(currentView, store);
+    store.deletePayment(id, "history", store);
   }
 };
 
@@ -36,15 +32,17 @@ document.addEventListener("submit", (e) => {
 
   if (form !== null && form.id === "expense-form") {
     const formData = new FormData(form);
-    store.addExpense({
-      id: Date.now().toString(),
-      payerId: formData.get("payerId"),
-      amount: parseFloat(formData.get("amount")),
-      description: formData.get("description"),
-      date: new Date().toISOString(),
-    });
-    currentView = "dashboard";
-    render(currentView, store);
+    store.addExpense(
+      {
+        id: Date.now().toString(),
+        payerId: formData.get("payerId"),
+        amount: parseFloat(formData.get("amount")),
+        description: formData.get("description"),
+        date: new Date().toISOString(),
+      },
+      "dashboard",
+      store
+    );
   }
 
   if (form !== null && form.id === "payment-form") {
@@ -57,15 +55,17 @@ document.addEventListener("submit", (e) => {
       return;
     }
 
-    store.addPayment({
-      id: Date.now().toString(),
-      fromId,
-      toId,
-      amount: parseFloat(formData.get("amount")),
-      date: new Date().toISOString(),
-    });
-    currentView = "dashboard";
-    render(currentView, store);
+    store.addPayment(
+      {
+        id: Date.now().toString(),
+        fromId,
+        toId,
+        amount: parseFloat(formData.get("amount")),
+        date: new Date().toISOString(),
+      },
+      "dashboard",
+      store
+    );
   }
 });
 
