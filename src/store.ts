@@ -1,4 +1,8 @@
-import { expenseService, paymentService } from "./services/databaseService";
+import {
+  expenseService,
+  participantService,
+  paymentService,
+} from "./services/databaseService";
 import type { Participant, Expense, Payment } from "./types";
 
 export default class AppStore {
@@ -73,43 +77,26 @@ export default class AppStore {
     );
   }
 
-  loadFromStorage() {
-    const usersData = localStorage.getItem("splitexpenses_users");
+  async loadFromStorage() {
+    Promise.all([
+      expenseService.getExpenses(),
+      paymentService.getPayments(),
+      participantService.getParticipants(),
+    ])
+      .then((data) => {
+        this.expenses = data[0];
+        console.log("expenses loaded ==> ", data[0]);
 
-    if (usersData) {
-      this.users = JSON.parse(usersData);
-    }
+        this.payments = data[1];
+        console.log("payments loaded ==> ", data[1]);
 
-    expenseService
-      .getExpenses()
-      .then((expenses: Expense[]) => {
-        this.expenses = expenses;
-        this.notify("dashboard", this);
-        console.log("expenses loaded ==> ", expenses);
+        this.users = data[2];
+        console.log("participants loaded ==> ", data[2]);
       })
       .catch((error) =>
-        console.log("error loading expenses from firebase ==> ", error)
-      );
-
-    paymentService
-      .getPayments()
-      .then((payments) => {
-        this.payments = payments;
-        this.notify("dashboard", this);
-        console.log("payments loaded ==> ", payments);
-      })
-      .catch((error) =>
-        console.log("error loading payments from firebase ==> ", error)
-      );
-
-    if (this.users.length === 0) {
-      this.users = [
-        { id: "1", name: "Fer" },
-        { id: "2", name: "Seba" },
-        { id: "3", name: "Nata" },
-      ];
-      this.saveToStorage();
-    }
+        console.log("error loading data from firebase ==> ", error)
+      )
+      .finally(() => this.notify("dashboard", this));
   }
 
   subscribe(listener: (currentView: string, store: AppStore) => any) {

@@ -13,7 +13,52 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-import type { Expense, Payment, Balance, Debt } from "../types";
+import type { Expense, Payment, Participant } from "../types";
+
+// Participant Operations
+export const participantService = {
+  async createParticipant(
+    participant: Omit<Participant, "id">
+  ): Promise<string> {
+    const docRef = await addDoc(collection(db, "participants"), {
+      ...participant,
+      createdAt: Timestamp.now(),
+    });
+    return docRef.id;
+  },
+
+  async createParticipantList(): Promise<string[]> {
+    const participantList = [
+      { name: "Fer" },
+      { name: "Seba" },
+      { name: "Nata" },
+    ];
+
+    const promises = participantList.map(
+      (participant: Omit<Participant, "id">) =>
+        addDoc(collection(db, "participants"), {
+          ...participant,
+          createdAt: Timestamp.now(),
+        })
+    );
+
+    const docRef = await Promise.all(promises);
+
+    return docRef.map((ref) => ref.id);
+  },
+
+  async getParticipants(): Promise<Participant[]> {
+    const querySnapshot = await getDocs(query(collection(db, "participants")));
+
+    return querySnapshot.docs.map(
+      (doc) =>
+        ({
+          id: doc.id,
+          ...doc.data(),
+        } as Participant)
+    );
+  },
+};
 
 // Expense Operations
 export const expenseService = {
@@ -117,62 +162,5 @@ export const paymentService = {
           ...doc.data(),
         } as Payment)
     );
-  },
-};
-
-// Balance Operations
-export const balanceService = {
-  async updateBalance(userId: string, balance: number): Promise<void> {
-    const docRef = doc(db, "balances", userId);
-    await updateDoc(docRef, { balance }, { merge: true });
-  },
-
-  async getBalance(userId: string): Promise<Balance | null> {
-    const docRef = doc(db, "balances", userId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      return { userId: docSnap.id, ...docSnap.data() } as Balance;
-    }
-    return null;
-  },
-
-  async getAllBalances(): Promise<Balance[]> {
-    const querySnapshot = await getDocs(collection(db, "balances"));
-    return querySnapshot.docs.map(
-      (doc) =>
-        ({
-          userId: doc.id,
-          ...doc.data(),
-        } as Balance)
-    );
-  },
-};
-
-// Debt Operations
-export const debtService = {
-  async updateDebt(debt: Debt): Promise<void> {
-    const debtId = `${debt.fromId}_${debt.toId}`;
-    const docRef = doc(db, "debts", debtId);
-
-    if (debt.amount === 0) {
-      // Delete if debt is settled
-      await deleteDoc(docRef);
-    } else {
-      // Update or create debt
-      await updateDoc(docRef, { ...debt }, { merge: true });
-    }
-  },
-
-  async getDebtsForUser(userId: string): Promise<Debt[]> {
-    const q = query(collection(db, "debts"), where("fromId", "==", userId));
-
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => doc.data() as Debt);
-  },
-
-  async getAllDebts(): Promise<Debt[]> {
-    const querySnapshot = await getDocs(collection(db, "debts"));
-    return querySnapshot.docs.map((doc) => doc.data() as Debt);
   },
 };
