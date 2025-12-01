@@ -1,3 +1,4 @@
+import { expenseService, paymentService } from "./services/databaseService";
 import type { User, Expense, Payment } from "./types";
 
 export default class AppStore {
@@ -25,9 +26,15 @@ export default class AppStore {
   }
 
   addExpense(expense: Expense, currentView: string, store: AppStore) {
-    this.expenses.push(expense);
-    this.saveToStorage();
-    this.notify(currentView, store);
+    expenseService
+      .createExpense(expense)
+      .then((expenseId) => {
+        expense.id = expenseId;
+        this.expenses.push(expense);
+        console.log("expense created id ==> ", expenseId);
+      })
+      .catch((error) => console.log("fail to create the expense ==> ", error))
+      .finally(() => this.notify(currentView, store));
   }
 
   deleteExpense(id: string, currentView: string, store: AppStore) {
@@ -37,9 +44,15 @@ export default class AppStore {
   }
 
   addPayment(payment: Payment, currentView: string, store: AppStore) {
-    this.payments.push(payment);
-    this.saveToStorage();
-    this.notify(currentView, store);
+    paymentService
+      .createPayment(payment)
+      .then((paymentId) => {
+        payment.id = paymentId;
+        this.payments.push(payment);
+        console.log("payment created id ==> ", paymentId);
+      })
+      .catch((error) => console.log("fail to create the payment ==> ", error))
+      .finally(() => this.notify(currentView, store));
   }
 
   deletePayment(id: string, currentView: string, store: AppStore) {
@@ -62,24 +75,38 @@ export default class AppStore {
 
   loadFromStorage() {
     const usersData = localStorage.getItem("splitexpenses_users");
-    const expensesData = localStorage.getItem("splitexpenses_expenses");
-    const paymentsData = localStorage.getItem("splitexpenses_payments");
 
     if (usersData) {
       this.users = JSON.parse(usersData);
     }
-    if (expensesData) {
-      this.expenses = JSON.parse(expensesData);
-    }
-    if (paymentsData) {
-      this.payments = JSON.parse(paymentsData);
-    }
+
+    expenseService
+      .getExpenses()
+      .then((expenses: Expense[]) => {
+        this.expenses = expenses;
+        this.notify("dashboard", this);
+        console.log("expenses loaded ==> ", expenses);
+      })
+      .catch((error) =>
+        console.log("error loading expenses from firebase ==> ", error)
+      );
+
+    paymentService
+      .getPayments()
+      .then((payments) => {
+        this.payments = payments;
+        this.notify("dashboard", this);
+        console.log("payments loaded ==> ", payments);
+      })
+      .catch((error) =>
+        console.log("error loading payments from firebase ==> ", error)
+      );
 
     if (this.users.length === 0) {
       this.users = [
-        { id: "1", name: "Juan" },
-        { id: "2", name: "Valeria" },
-        { id: "3", name: "Juana" },
+        { id: "1", name: "Fer" },
+        { id: "2", name: "Seba" },
+        { id: "3", name: "Nata" },
       ];
       this.saveToStorage();
     }

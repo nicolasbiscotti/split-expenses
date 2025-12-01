@@ -34,7 +34,6 @@ document.addEventListener("submit", (e) => {
     const formData = new FormData(form);
     store.addExpense(
       {
-        id: Date.now().toString(),
         payerId: formData.get("payerId"),
         amount: parseFloat(formData.get("amount")),
         description: formData.get("description"),
@@ -57,7 +56,6 @@ document.addEventListener("submit", (e) => {
 
     store.addPayment(
       {
-        id: Date.now().toString(),
         fromId,
         toId,
         amount: parseFloat(formData.get("amount")),
