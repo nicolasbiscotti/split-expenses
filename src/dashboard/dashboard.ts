@@ -1,5 +1,6 @@
 import type AppStore from "../store";
 import { calculateBalances, calculateDebts } from "../util/calculations";
+import renderDebtList from "./debtList";
 
 export default function renderDashboard(store: AppStore) {
   const users = store.getUsers();
@@ -55,33 +56,8 @@ export default function renderDashboard(store: AppStore) {
             </div>
           </div>
 
-          ${
-            debts.length > 0
-              ? `
-            <div class="bg-white rounded-lg shadow p-4">
-              <h2 class="text-lg font-semibold mb-3">Cómo Saldar Cuentas</h2>
-              <div class="space-y-2">
-                ${debts
-                  .map((debt) => {
-                    const from = users.find((u) => u.id === debt.fromId);
-                    const to = users.find((u) => u.id === debt.toId);
-                    return `
-                    <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded">
-                      <span class="font-medium">${from?.name}</span>
-                      <span class="text-gray-600">→</span>
-                      <span class="font-medium">${to?.name}</span>
-                      <span class="ml-auto font-bold text-yellow-700">$${debt.amount.toFixed(
-                        2
-                      )}</span>
-                    </div>
-                  `;
-                  })
-                  .join("")}
-              </div>
-            </div>
-          `
-              : ""
-          }
+          ${renderDebtList(debts, users)}
+          
         </div>
       `;
 }
