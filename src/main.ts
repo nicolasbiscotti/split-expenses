@@ -11,10 +11,10 @@ declare global {
   }
 }
 
-// Store instance
+// Store instance.
 const store = new AppStore();
 
-// App state
+// App state.
 let currentView = "dashboard";
 
 window.setView = (view: string) => {
