@@ -1,6 +1,6 @@
-import type { Debt, User } from "../types";
+import type { Debt, Participant } from "../types";
 
-export default function renderDebtList(debts: Debt[], users: User[]) {
+export default function renderDebtList(debts: Debt[], users: Participant[]) {
   return `${
     debts.length > 0
       ? `

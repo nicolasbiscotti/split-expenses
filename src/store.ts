@@ -1,8 +1,8 @@
 import { expenseService, paymentService } from "./services/databaseService";
-import type { User, Expense, Payment } from "./types";
+import type { Participant, Expense, Payment } from "./types";
 
 export default class AppStore {
-  users: User[];
+  users: Participant[];
   expenses: Expense[];
   payments: Payment[];
   listeners: any;

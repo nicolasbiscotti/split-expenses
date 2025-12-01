@@ -1,11 +1,11 @@
 // src/store/AppStore.ts
 
-import { User, Expense, Payment, SharedExpense } from "./types";
+import { Participant, Expense, Payment, SharedExpense } from "./types";
 
 type Listener = () => void;
 
 export class AppStore {
-  private users: User[] = [];
+  private users: Participant[] = [];
   private expenses: Expense[] = [];
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
@@ -17,17 +17,17 @@ export class AppStore {
   }
 
   // Usuarios
-  getUsers(): User[] {
+  getUsers(): Participant[] {
     return [...this.users];
   }
 
-  addUser(user: User): void {
+  addUser(user: Participant): void {
     this.users.push(user);
     this.saveToStorage();
     this.notify();
   }
 
-  getUsersByIds(ids: string[]): User[] {
+  getUsersByIds(ids: string[]): Participant[] {
     return this.users.filter((u) => ids.includes(u.id));
   }
 

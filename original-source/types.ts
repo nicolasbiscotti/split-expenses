@@ -1,6 +1,6 @@
 // src/types/index.ts
 
-export interface User {
+export interface Participant {
   id: string;
   name: string;
 }

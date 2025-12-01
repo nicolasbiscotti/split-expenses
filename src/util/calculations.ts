@@ -1,7 +1,7 @@
-import type { User, Expense, Payment, Balance, Debt } from "../types";
+import type { Participant, Expense, Payment, Balance, Debt } from "../types";
 
 export function calculateBalances(
-  users: User[],
+  users: Participant[],
   expenses: Expense[],
   payments: Payment[]
 ) {
