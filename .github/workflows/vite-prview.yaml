@@ -49,5 +49,8 @@ jobs:
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy with prebuilt output
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
