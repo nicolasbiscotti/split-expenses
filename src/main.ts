@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-// Store instance
+// Store instance.
 const store = new AppStore();
 
 // App state
