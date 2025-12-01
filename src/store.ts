@@ -77,7 +77,6 @@ export default class AppStore {
     );
   }
 
-  // 
   async loadFromStorage() {
     Promise.all([
       expenseService.getExpenses(),
