@@ -82,6 +82,7 @@ export default class AppStore {
       expenseService.getExpenses(),
       paymentService.getPayments(),
       participantService.getParticipants(),
+      participantService.createParticipantList(),
     ])
       .then((data) => {
         this.expenses = data[0];
