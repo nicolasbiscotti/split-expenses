@@ -20,18 +20,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-          cache: 'pnpm'
+          cache: 'npm'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup npm
+        uses: npm/action-setup@v4
         with:
           version: 10.24.0
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Build Vite project
-        run: pnpm build        
+        run: npm build        
       # Vite projects may need environment variables during build
         env:  
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -42,7 +42,7 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+        run: npm add -g vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
