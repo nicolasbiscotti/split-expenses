@@ -2,6 +2,14 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 
+declare global {
+  interface Window {
+    setView: (view: string) => void;
+    deleteExpense: (id: string) => void;
+    deletePayment: (id: string) => void;
+  }
+}
+
 // Store instance
 const store = new AppStore();
 
