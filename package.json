@@ -1,6 +1,7 @@
 {
-  "name": "hellovite",
-  "private": true,
+  "name": "split-expenses",
+  "license": "MIT",
+  "author": "Nicolás Biscotti <nicolas.biscotti@gmail.com>",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -9,12 +10,12 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.17",
+    "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.17",
-    "firebase": "^12.6.0",
-    "tailwindcss": "^4.1.17"
+    "firebase": "^12.6.0"
   }
 }
