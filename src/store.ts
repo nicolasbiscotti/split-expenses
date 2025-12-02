@@ -42,9 +42,13 @@ export default class AppStore {
   }
 
   deleteExpense(id: string, currentView: string, store: AppStore) {
-    this.expenses = this.expenses.filter((e) => e.id !== id);
-    this.saveToStorage();
-    this.notify(currentView, store);
+    expenseService
+      .deleteExpense(id)
+      .then(() => {
+        this.expenses = this.expenses.filter((e) => e.id !== id);
+      })
+      .catch((error) => console.log("fail to delete the expense ==> ", error))
+      .finally(() => this.notify(currentView, store));
   }
 
   addPayment(payment: Payment, currentView: string, store: AppStore) {
@@ -60,24 +64,16 @@ export default class AppStore {
   }
 
   deletePayment(id: string, currentView: string, store: AppStore) {
-    this.payments = this.payments.filter((p) => p.id !== id);
-    this.saveToStorage();
-    this.notify(currentView, store);
+    paymentService
+      .deletePayment(id)
+      .then(() => {
+        this.payments = this.payments.filter((p) => p.id !== id);
+      })
+      .catch((error) => console.log("fail to delete the expense ==> ", error))
+      .finally(() => this.notify(currentView, store));
   }
 
-  saveToStorage() {
-    localStorage.setItem("splitexpenses_users", JSON.stringify(this.users));
-    localStorage.setItem(
-      "splitexpenses_expenses",
-      JSON.stringify(this.expenses)
-    );
-    localStorage.setItem(
-      "splitexpenses_payments",
-      JSON.stringify(this.payments)
-    );
-  }
-
-  // async loadFromStorage() {
+  // loadFromStorage() {
   //   participantService
   //     .createParticipantList()
   //     .then((participantIds) => {
@@ -102,7 +98,7 @@ export default class AppStore {
   //     .finally(() => this.notify("dashboard", this));
   // }
 
-  async loadFromStorage() {
+  loadFromStorage() {
     Promise.all([
       expenseService.getExpenses(),
       paymentService.getPayments(),

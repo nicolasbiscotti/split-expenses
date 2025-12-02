@@ -162,4 +162,9 @@ export const paymentService = {
         } as Payment)
     );
   },
+
+  async deletePayment(id: string): Promise<void> {
+    const docRef = doc(db, "payments", id);
+    await deleteDoc(docRef);
+  },
 };
