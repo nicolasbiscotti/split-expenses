@@ -6,21 +6,21 @@ import {
 import type { Participant, Expense, Payment } from "./types";
 
 export default class AppStore {
-  users: Participant[];
+  participants: Participant[];
   expenses: Expense[];
   payments: Payment[];
   listeners: any;
 
   constructor() {
-    this.users = [];
+    this.participants = [];
     this.expenses = [];
     this.payments = [];
     this.listeners = [];
     this.loadFromStorage();
   }
 
-  getUsers() {
-    return [...this.users];
+  getParticipants() {
+    return [...this.participants];
   }
   getExpenses() {
     return [...this.expenses];
@@ -89,7 +89,7 @@ export default class AppStore {
   //       return [];
   //     })
   //     .then((participants) => {
-  //       this.users = participants;
+  //       this.participants = participants;
   //       console.log("participants loaded ==> ", participants);
   //     })
   //     .catch((error) =>
@@ -111,7 +111,7 @@ export default class AppStore {
         this.payments = data[1];
         console.log("payments loaded ==> ", data[1]);
 
-        this.users = data[2];
+        this.participants = data[2];
         console.log("participants loaded ==> ", data[2]);
       })
       .catch((error) =>

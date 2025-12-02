@@ -3,7 +3,7 @@ import type AppStore from "../store";
 export default function renderHistory(store: AppStore) {
   const expenses = store.getExpenses();
   const payments = store.getPayments();
-  const users = store.getUsers();
+  const participants = store.getParticipants();
 
   return `
         <div class="space-y-4">
@@ -16,7 +16,7 @@ export default function renderHistory(store: AppStore) {
               <div class="space-y-2">
                 ${expenses
                   .map((exp) => {
-                    const payer = users.find((u) => u.id === exp.payerId);
+                    const payer = participants.find((u) => u.id === exp.payerId);
                     return `
                     <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
                       <div>
@@ -49,8 +49,8 @@ export default function renderHistory(store: AppStore) {
               <div class="space-y-2">
                 ${payments
                   .map((pay) => {
-                    const from = users.find((u) => u.id === pay.fromId);
-                    const to = users.find((u) => u.id === pay.toId);
+                    const from = participants.find((u) => u.id === pay.fromId);
+                    const to = participants.find((u) => u.id === pay.toId);
                     return `
                     <div class="flex justify-between items-center p-2 bg-green-50 rounded">
                       <div>

@@ -20,7 +20,7 @@ export interface Payment {
 }
 
 export interface Balance {
-  userId: string;
+  participantId: string;
   balance: number;
 }
 

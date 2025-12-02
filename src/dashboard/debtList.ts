@@ -1,6 +1,6 @@
 import type { Debt, Participant } from "../types";
 
-export default function renderDebtList(debts: Debt[], users: Participant[]) {
+export default function renderDebtList(debts: Debt[], participants: Participant[]) {
   return `${
     debts.length > 0
       ? `
@@ -9,8 +9,8 @@ export default function renderDebtList(debts: Debt[], users: Participant[]) {
               <div class="space-y-2">
                 ${debts
                   .map((debt) => {
-                    const from = users.find((u) => u.id === debt.fromId);
-                    const to = users.find((u) => u.id === debt.toId);
+                    const from = participants.find((u) => u.id === debt.fromId);
+                    const to = participants.find((u) => u.id === debt.toId);
                     return `
                     <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded">
                       <span class="font-medium">${from?.name}</span>

@@ -3,10 +3,10 @@ import { calculateBalances, calculateDebts } from "../util/calculations";
 import renderDebtList from "../dashboard/debtList";
 
 export default function renderPaymentForm(store: AppStore) {
-  const users = store.getUsers();
+  const participants = store.getParticipants();
   const expenses = store.getExpenses();
   const payments = store.getPayments();
-  const balances = calculateBalances(users, expenses, payments);
+  const balances = calculateBalances(participants, expenses, payments);
   const debts = calculateDebts(balances);
 
   return `
@@ -17,7 +17,7 @@ export default function renderPaymentForm(store: AppStore) {
               <div>
                 <label class="block text-sm font-medium mb-1">Quién paga</label>
                 <select name="fromId" required class="w-full p-2 border rounded">
-                  ${users
+                  ${participants
                     .map((u) => `<option value="${u.id}">${u.name}</option>`)
                     .join("")}
                 </select>
@@ -25,7 +25,7 @@ export default function renderPaymentForm(store: AppStore) {
               <div>
                 <label class="block text-sm font-medium mb-1">A quién paga</label>
                 <select name="toId" required class="w-full p-2 border rounded">
-                  ${users
+                  ${participants
                     .map((u) => `<option value="${u.id}">${u.name}</option>`)
                     .join("")}
                 </select>
@@ -41,7 +41,7 @@ export default function renderPaymentForm(store: AppStore) {
             </form>
           </div>
 
-          ${renderDebtList(debts, users)}
+          ${renderDebtList(debts, participants)}
 
         </div>
       `;

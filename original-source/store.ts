@@ -5,7 +5,7 @@ import { Participant, Expense, Payment, SharedExpense } from "./types";
 type Listener = () => void;
 
 export class AppStore {
-  private users: Participant[] = [];
+  private participants: Participant[] = [];
   private expenses: Expense[] = [];
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
@@ -16,19 +16,19 @@ export class AppStore {
     this.loadFromStorage();
   }
 
-  // Usuarios
-  getUsers(): Participant[] {
-    return [...this.users];
+  // Participantes
+  getParticipants(): Participant[] {
+    return [...this.participants];
   }
 
-  addUser(user: Participant): void {
-    this.users.push(user);
+  addParticipant(participant: Participant): void {
+    this.participants.push(participant);
     this.saveToStorage();
     this.notify();
   }
 
-  getUsersByIds(ids: string[]): Participant[] {
-    return this.users.filter((u) => ids.includes(u.id));
+  getParticipantByIds(ids: string[]): Participant[] {
+    return this.participants.filter((p) => ids.includes(p.id));
   }
 
   // Gastos Compartidos
@@ -118,7 +118,10 @@ export class AppStore {
 
   // Persistencia
   private saveToStorage(): void {
-    localStorage.setItem("splitexpenses_users", JSON.stringify(this.users));
+    localStorage.setItem(
+      "splitexpenses_users",
+      JSON.stringify(this.participants)
+    );
     localStorage.setItem(
       "splitexpenses_expenses",
       JSON.stringify(this.expenses)
@@ -144,15 +147,15 @@ export class AppStore {
     const sharedData = localStorage.getItem("splitexpenses_shared");
     const currentData = localStorage.getItem("splitexpenses_current");
 
-    if (usersData) this.users = JSON.parse(usersData);
+    if (usersData) this.participants = JSON.parse(usersData);
     if (expensesData) this.expenses = JSON.parse(expensesData);
     if (paymentsData) this.payments = JSON.parse(paymentsData);
     if (sharedData) this.sharedExpenses = JSON.parse(sharedData);
     if (currentData) this.currentSharedExpenseId = currentData || null;
 
     // Usuarios por defecto si no hay ninguno
-    if (this.users.length === 0) {
-      this.users = [
+    if (this.participants.length === 0) {
+      this.participants = [
         { id: "1", name: "Juan" },
         { id: "2", name: "Valeria" },
         { id: "3", name: "Juana" },

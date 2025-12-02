@@ -97,11 +97,11 @@ export const expenseService = {
     );
   },
 
-  // Get expenses by user
-  async getExpensesByUser(userId: string): Promise<Expense[]> {
+  // Get expenses by participant
+  async getExpensesByUser(participantId: string): Promise<Expense[]> {
     const q = query(
       collection(db, "expenses"),
-      where("payerId", "==", userId),
+      where("payerId", "==", participantId),
       orderBy("date", "desc")
     );
 

@@ -1,16 +1,16 @@
 import type { Participant, Expense, Payment, Balance, Debt } from "../types";
 
 export function calculateBalances(
-  users: Participant[],
+  participants: Participant[],
   expenses: Expense[],
   payments: Payment[]
 ) {
   const balances = new Map();
-  users.forEach((user) => balances.set(user.id, 0));
+  participants.forEach((participant) => balances.set(participant.id, 0));
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const sharePerPerson = totalExpenses / users.length;
-  users.forEach((user) => balances.set(user.id, -sharePerPerson));
+  const sharePerPerson = totalExpenses / participants.length;
+  participants.forEach((participant) => balances.set(participant.id, -sharePerPerson));
 
   expenses.forEach((expense) => {
     const current = balances.get(expense.payerId) || 0;
@@ -24,8 +24,8 @@ export function calculateBalances(
     balances.set(payment.toId, toBalance - payment.amount);
   });
 
-  return Array.from(balances.entries()).map(([userId, balance]) => ({
-    userId,
+  return Array.from(balances.entries()).map(([participantId, balance]) => ({
+    participantId,
     balance: Math.round(balance * 100) / 100,
   }));
 }
@@ -51,8 +51,8 @@ export function calculateDebts(balances: Balance[]) {
     const settleAmount = Math.min(Math.abs(debtor.balance), creditor.balance);
 
     debts.push({
-      fromId: debtor.userId,
-      toId: creditor.userId,
+      fromId: debtor.participantId,
+      toId: creditor.participantId,
       amount: Math.round(settleAmount * 100) / 100,
     });
 

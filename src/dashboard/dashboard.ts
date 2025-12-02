@@ -3,10 +3,10 @@ import { calculateBalances, calculateDebts } from "../util/calculations";
 import renderDebtList from "./debtList";
 
 export default function renderDashboard(store: AppStore) {
-  const users = store.getUsers();
+  const participants = store.getParticipants();
   const expenses = store.getExpenses();
   const payments = store.getPayments();
-  const balances = calculateBalances(users, expenses, payments);
+  const balances = calculateBalances(participants, expenses, payments);
   const debts = calculateDebts(balances);
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -28,7 +28,7 @@ export default function renderDashboard(store: AppStore) {
             <div class="space-y-2">
               ${balances
                 .map((b) => {
-                  const user = users.find((u) => u.id === b.userId);
+                  const participant = participants.find((u) => u.id === b.participantId);
                   const isPositive = b.balance > 0.01;
                   const isNegative = b.balance < -0.01;
                   return `
@@ -39,7 +39,7 @@ export default function renderDashboard(store: AppStore) {
                       ? "bg-red-50"
                       : "bg-gray-50"
                   }">
-                    <span class="font-medium">${user?.name}</span>
+                    <span class="font-medium">${participant?.name}</span>
                     <span class="font-bold ${
                       isPositive
                         ? "text-green-600"
@@ -56,7 +56,7 @@ export default function renderDashboard(store: AppStore) {
             </div>
           </div>
 
-          ${renderDebtList(debts, users)}
+          ${renderDebtList(debts, participants)}
           
         </div>
       `;

@@ -1,7 +1,7 @@
 import type AppStore from "../store";
 
 export default function renderExpenseForm(store: AppStore) {
-  const users = store.getUsers();
+  const participants = store.getParticipants();
   return `
         <div class="bg-white rounded-lg shadow p-6">
           <h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
@@ -9,7 +9,7 @@ export default function renderExpenseForm(store: AppStore) {
             <div>
               <label class="block text-sm font-medium mb-1">Quién pagó</label>
               <select name="payerId" required class="w-full p-2 border rounded">
-                ${users
+                ${participants
                   .map((u) => `<option value="${u.id}">${u.name}</option>`)
                   .join("")}
               </select>
