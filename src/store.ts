@@ -77,6 +77,31 @@ export default class AppStore {
     );
   }
 
+  // async loadFromStorage() {
+  //   participantService
+  //     .createParticipantList()
+  //     .then((participantIds) => {
+  //       if (participantIds.length > 0) {
+  //         return true;
+  //       }
+  //       return false;
+  //     })
+  //     .then((created) => {
+  //       if (created) {
+  //         return participantService.getParticipants();
+  //       }
+  //       return [];
+  //     })
+  //     .then((participants) => {
+  //       this.users = participants;
+  //       console.log("participants loaded ==> ", participants);
+  //     })
+  //     .catch((error) =>
+  //       console.log("error loading data from firebase ==> ", error)
+  //     )
+  //     .finally(() => this.notify("dashboard", this));
+  // }
+
   async loadFromStorage() {
     Promise.all([
       expenseService.getExpenses(),

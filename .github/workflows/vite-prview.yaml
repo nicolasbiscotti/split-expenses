@@ -3,6 +3,9 @@ name: Deploy Vite to Preview Vercel
 on:
   push:
     branches-ignore: [ main ]
+  
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -14,18 +17,17 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
         with:
-          node-version: '22.16.0'
-          cache: 'pnpm'
+          node-version: lts/*
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v3 
         with:
-          version: 10.24.0
+          version: 'latest'
 
       - name: Install dependencies
         run: pnpm install
@@ -46,6 +48,9 @@ jobs:
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy with prebuilt output
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}

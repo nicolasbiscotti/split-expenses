@@ -1,8 +1,17 @@
 import "./style.css";
 import AppStore from "./store";
 import render from "./render";
+import type { Expense, Payment } from "./types";
 
-// Store instance
+declare global {
+  interface Window {
+    setView: (view: string) => void;
+    deleteExpense: (id: string) => void;
+    deletePayment: (id: string) => void;
+  }
+}
+
+// Store instance.
 const store = new AppStore();
 
 // App state
@@ -28,26 +37,31 @@ window.deletePayment = (id: string) => {
 // Event delegation for forms
 document.addEventListener("submit", (e) => {
   e.preventDefault();
-  const form = e.target;
+  const form = e.target as HTMLFormElement;
 
-  if (form !== null && form.id === "expense-form") {
+  if (form.id === "expense-form") {
     const formData = new FormData(form);
+    const payerId = formData.get("payerId") as string;
+    const amount = formData.get("amount") as string;
+    const description = formData.get("description") as string;
+
     store.addExpense(
       {
-        payerId: formData.get("payerId"),
-        amount: parseFloat(formData.get("amount")),
-        description: formData.get("description"),
+        payerId,
+        amount: parseFloat(amount),
+        description,
         date: new Date().toISOString(),
-      },
+      } as Expense,
       "dashboard",
       store
     );
   }
 
-  if (form !== null && form.id === "payment-form") {
+  if (form.id === "payment-form") {
     const formData = new FormData(form);
-    const fromId = formData.get("fromId");
-    const toId = formData.get("toId");
+    const fromId = formData.get("fromId") as string;
+    const toId = formData.get("toId") as string;
+    const amount = formData.get("amount") as string;
 
     if (fromId === toId) {
       alert("No puedes registrar un pago a la misma persona");
@@ -58,9 +72,9 @@ document.addEventListener("submit", (e) => {
       {
         fromId,
         toId,
-        amount: parseFloat(formData.get("amount")),
+        amount: parseFloat(amount),
         date: new Date().toISOString(),
-      },
+      } as Payment,
       "dashboard",
       store
     );
