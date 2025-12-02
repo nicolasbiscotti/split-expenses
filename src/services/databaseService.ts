@@ -60,10 +60,20 @@ export const participantService = {
 };
 
 // Expense Operations
+const expensesCollectionPath = `environments/${
+  import.meta.env.VITE_FIRESTORE_DATA_ID
+}/expenses`;
+
+async function getExpensesCollectionRef() {
+  return collection(db, expensesCollectionPath);
+}
+
 export const expenseService = {
   // Create new expense
   async createExpense(expense: Omit<Expense, "id">): Promise<string> {
-    const docRef = await addDoc(collection(db, "expenses"), {
+    const collectionRef = await getExpensesCollectionRef();
+
+    const docRef = await addDoc(collectionRef, {
       ...expense,
       createdAt: Timestamp.now(),
     });
@@ -72,8 +82,10 @@ export const expenseService = {
 
   // Get all expenses
   async getExpenses(): Promise<Expense[]> {
+    const collectionRef = await getExpensesCollectionRef();
+
     const querySnapshot = await getDocs(
-      query(collection(db, "expenses"), orderBy("date", "desc"))
+      query(collectionRef, orderBy("date", "desc"))
     );
 
     return querySnapshot.docs.map(
@@ -114,15 +126,25 @@ export const expenseService = {
 
   // Delete expense
   async deleteExpense(id: string): Promise<void> {
-    const docRef = doc(db, "expenses", id);
+    const docRef = doc(db, expensesCollectionPath, id);
     await deleteDoc(docRef);
   },
 };
 
 // Payment Operations
+const paymentsCollectionPath = `environments/${
+  import.meta.env.VITE_FIRESTORE_DATA_ID
+}/payments`;
+
+async function getPaymentsCollectionRef() {
+  return collection(db, paymentsCollectionPath);
+}
+
 export const paymentService = {
   async createPayment(payment: Omit<Payment, "id">): Promise<string> {
-    const docRef = await addDoc(collection(db, "payments"), {
+    const paymentsCollectionRef = await getPaymentsCollectionRef();
+
+    const docRef = await addDoc(paymentsCollectionRef, {
       ...payment,
       createdAt: Timestamp.now(),
     });
@@ -130,8 +152,10 @@ export const paymentService = {
   },
 
   async getPayments(): Promise<Payment[]> {
+    const paymentsCollectionRef = await getPaymentsCollectionRef();
+
     const querySnapshot = await getDocs(
-      query(collection(db, "payments"), orderBy("date", "desc"))
+      query(paymentsCollectionRef, orderBy("date", "desc"))
     );
 
     return querySnapshot.docs.map(
@@ -161,5 +185,10 @@ export const paymentService = {
           ...doc.data(),
         } as Payment)
     );
+  },
+
+  async deletePayment(id: string): Promise<void> {
+    const docRef = doc(db, paymentsCollectionPath, id);
+    await deleteDoc(docRef);
   },
 };

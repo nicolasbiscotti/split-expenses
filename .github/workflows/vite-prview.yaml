@@ -43,6 +43,8 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
+          VITE_FIRESTORE_DATA_ID: ${{ secrets.VITE_FIRESTORE_PREVIEW_DATA_ID }}
+
       - name: Install Vercel CLI
         run: pnpm add -g vercel@latest
 
