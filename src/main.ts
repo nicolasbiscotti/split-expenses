@@ -1,11 +1,11 @@
 import "./style.css";
 import AppStore from "./store";
 import render from "./render";
-import type { Expense, Payment } from "./types";
+import type { Expense, Payment, ViewType } from "./types";
 
 declare global {
   interface Window {
-    setView: (view: string) => void;
+    setView: (view: ViewType) => void;
     deleteExpense: (id: string) => void;
     deletePayment: (id: string) => void;
   }
@@ -15,9 +15,9 @@ declare global {
 const store = new AppStore();
 
 // App state
-let currentView = "dashboard";
+let currentView: ViewType = "dashboard";
 
-window.setView = (view: string) => {
+window.setView = (view: ViewType) => {
   currentView = view;
   render(currentView, store);
 };
