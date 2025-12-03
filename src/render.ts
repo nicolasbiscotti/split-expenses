@@ -3,9 +3,15 @@ import renderDashboard from "./dashboard/dashboard";
 import renderExpenseForm from "./expenseForm/expenseForm";
 import renderPaymentForm from "./paymentForm/paymentForm";
 import renderHistory from "./history/history";
+import type { ViewType } from "./types";
 
-export default function render(currentView: string, store: AppStore) {
+export default function render(currentView: ViewType, store: AppStore) {
   const app = document.getElementById("app")!;
+  const currentId = store.getCurrentSharedExpenseId();
+  const currentSharedExpense = currentId
+    ? store.getSharedExpense(currentId)
+    : null;
+
   app.innerHTML = `
         <div class="max-w-lg mx-auto p-4 pb-20">
           <header class="mb-6">

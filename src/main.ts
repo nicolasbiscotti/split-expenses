@@ -81,5 +81,5 @@ document.addEventListener("submit", (e) => {
   }
 });
 
-store.subscribe(render);
+store.subscribeRender(render);
 render(currentView, store);

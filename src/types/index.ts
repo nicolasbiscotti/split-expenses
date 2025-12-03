@@ -5,6 +5,7 @@ export interface Participant {
 
 export interface Expense {
   id: string;
+  sharedExpenseId: string;
   payerId: string;
   amount: number;
   description: string;
@@ -13,6 +14,7 @@ export interface Expense {
 
 export interface Payment {
   id: string;
+  sharedExpenseId: string;
   fromId: string;
   toId: string;
   amount: number;
@@ -28,4 +30,35 @@ export interface Debt {
   fromId: string;
   toId: string;
   amount: number;
+}
+
+export type ViewType =
+  | "dashboard"
+  | "add-expense"
+  | "add-payment"
+  | "history"
+  | "shared-expense-list";
+
+export type SharedExpenseType = "unique" | "recurring";
+export type SharedExpenseStatus = "active" | "closed";
+
+export interface SharedExpense {
+  id: string;
+  name: string;
+  description: string;
+  type: SharedExpenseType;
+  status: SharedExpenseStatus;
+  participantIds: string[];
+  createdAt: string;
+  closedAt?: string;
+  periodName?: string; // Para recurrentes: "Enero 2025"
+}
+
+export interface Period {
+  id: string;
+  sharedExpenseId: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  status: SharedExpenseStatus;
 }

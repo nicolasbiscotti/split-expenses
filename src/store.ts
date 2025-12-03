@@ -3,33 +3,37 @@ import {
   participantService,
   paymentService,
 } from "./services/databaseService";
-import type { Participant, Expense, Payment } from "./types";
+import type {
+  Participant,
+  Expense,
+  Payment,
+  SharedExpense,
+  ViewType,
+} from "./types";
+
+type Render = (currentView: ViewType, store: AppStore) => any;
 
 export default class AppStore {
-  participants: Participant[];
-  expenses: Expense[];
-  payments: Payment[];
-  listeners: any;
+  private participants: Participant[] = [];
+  private expenses: Expense[] = [];
+  private payments: Payment[] = [];
+  private sharedExpenses: SharedExpense[] = [];
+  private currentSharedExpenseId: string | null = null;
+  private renderList: Render[] = [];
 
   constructor() {
-    this.participants = [];
-    this.expenses = [];
-    this.payments = [];
-    this.listeners = [];
     this.loadFromStorage();
   }
 
   getParticipants() {
     return [...this.participants];
   }
+  addParticipant(participant: Participant): void {}
+
   getExpenses() {
     return [...this.expenses];
   }
-  getPayments() {
-    return [...this.payments];
-  }
-
-  addExpense(expense: Expense, currentView: string, store: AppStore) {
+  addExpense(expense: Expense, currentView: ViewType, store: AppStore) {
     expenseService
       .createExpense(expense)
       .then((expenseId) => {
@@ -38,20 +42,23 @@ export default class AppStore {
         console.log("expense created id ==> ", expenseId);
       })
       .catch((error) => console.log("fail to create the expense ==> ", error))
-      .finally(() => this.notify(currentView, store));
+      .finally(() => this.notifyRender(currentView, store));
   }
 
-  deleteExpense(id: string, currentView: string, store: AppStore) {
+  deleteExpense(id: string, currentView: ViewType, store: AppStore) {
     expenseService
       .deleteExpense(id)
       .then(() => {
         this.expenses = this.expenses.filter((e) => e.id !== id);
       })
       .catch((error) => console.log("fail to delete the expense ==> ", error))
-      .finally(() => this.notify(currentView, store));
+      .finally(() => this.notifyRender(currentView, store));
   }
 
-  addPayment(payment: Payment, currentView: string, store: AppStore) {
+  getPayments() {
+    return [...this.payments];
+  }
+  addPayment(payment: Payment, currentView: ViewType, store: AppStore) {
     paymentService
       .createPayment(payment)
       .then((paymentId) => {
@@ -60,17 +67,24 @@ export default class AppStore {
         console.log("payment created id ==> ", paymentId);
       })
       .catch((error) => console.log("fail to create the payment ==> ", error))
-      .finally(() => this.notify(currentView, store));
+      .finally(() => this.notifyRender(currentView, store));
   }
-
-  deletePayment(id: string, currentView: string, store: AppStore) {
+  deletePayment(id: string, currentView: ViewType, store: AppStore) {
     paymentService
       .deletePayment(id)
       .then(() => {
         this.payments = this.payments.filter((p) => p.id !== id);
       })
       .catch((error) => console.log("fail to delete the expense ==> ", error))
-      .finally(() => this.notify(currentView, store));
+      .finally(() => this.notifyRender(currentView, store));
+  }
+
+  // Shared Expenses
+  getCurrentSharedExpenseId(): string | null {
+    return this.currentSharedExpenseId;
+  }
+  getSharedExpense(id: string): SharedExpense | undefined {
+    return this.sharedExpenses.find((se) => se.id === id);
   }
 
   // loadFromStorage() {
@@ -95,7 +109,7 @@ export default class AppStore {
   //     .catch((error) =>
   //       console.log("error loading data from firebase ==> ", error)
   //     )
-  //     .finally(() => this.notify("dashboard", this));
+  //     .finally(() => this.notifyRender("dashboard", this));
   // }
 
   loadFromStorage() {
@@ -117,20 +131,19 @@ export default class AppStore {
       .catch((error) =>
         console.log("error loading data from firebase ==> ", error)
       )
-      .finally(() => this.notify("dashboard", this));
+      .finally(() => this.notifyRender("dashboard", this));
   }
 
-  subscribe(listener: (currentView: string, store: AppStore) => any) {
-    this.listeners.push(listener);
+  subscribeRender(render: Render): () => void {
+    this.renderList.push(render);
+
+    // return the unsubscribe function
     return () => {
-      this.listeners = this.listeners.filter((l: any) => l !== listener);
+      this.renderList = this.renderList.filter((r: any) => r !== render);
     };
   }
 
-  notify(currentView: string, store: AppStore) {
-    this.listeners.forEach(
-      (listener: (currentView: string, store: AppStore) => any) =>
-        listener(currentView, store)
-    );
+  private notifyRender(currentView: ViewType, store: AppStore) {
+    this.renderList.forEach((render: Render) => render(currentView, store));
   }
 }
