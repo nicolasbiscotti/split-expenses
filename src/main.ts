@@ -2,6 +2,8 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 import type { Expense, Payment, ViewType } from "./types";
+import AppState from "./state/AppState";
+import type { CreateSharedExpenseEvent } from "./eventEmitters/createSharedExpenseEvent";
 
 declare global {
   interface Window {
@@ -11,15 +13,15 @@ declare global {
   }
 }
 
-// Store instance.
-const store = new AppStore();
+// ==================== APP STATE ====================
+const state = new AppState();
 
-// App state
-let currentView: ViewType = "dashboard";
+// ==================== APP STORE ====================
+const store = new AppStore(state);
 
 window.setView = (view: ViewType) => {
-  currentView = view;
-  render(currentView, store);
+  // remember that state.setWhatever notify the change to render
+  state.setCurrentView(view, store);
 };
 
 window.deleteExpense = (id: string) => {
@@ -33,6 +35,16 @@ window.deletePayment = (id: string) => {
     store.deletePayment(id, "history", store);
   }
 };
+
+const handleCreateSharedExpense = (event: CreateSharedExpenseEvent) => {
+  console.log("Event received ==> ", event.detail);
+  state.setCurrentView(event.detail.currentView, store);
+};
+
+document.addEventListener(
+  "createsharedexpense",
+  handleCreateSharedExpense as unknown as EventListener
+);
 
 // Event delegation for forms
 document.addEventListener("submit", (e) => {
@@ -81,5 +93,5 @@ document.addEventListener("submit", (e) => {
   }
 });
 
-store.subscribeRender(render);
-render(currentView, store);
+state.subscribeRender(render);
+render(state, store);

@@ -3,6 +3,7 @@ import {
   participantService,
   paymentService,
 } from "./services/databaseService";
+import type AppState from "./state/AppState";
 import type {
   Participant,
   Expense,
@@ -11,28 +12,43 @@ import type {
   ViewType,
 } from "./types";
 
-type Render = (currentView: ViewType, store: AppStore) => any;
-
 export default class AppStore {
   private participants: Participant[] = [];
   private expenses: Expense[] = [];
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
-  private renderList: Render[] = [];
+  private state: AppState;
+  // private renderList: Render[] = [];
 
-  constructor() {
+  constructor(state: AppState) {
+    this.state = state;
     this.loadFromStorage();
   }
+
+  // ------------------------------------------------------
+  // Participants
 
   getParticipants() {
     return [...this.participants];
   }
   addParticipant(participant: Participant): void {}
 
+  getParticipantsByIds(ids: string[]): Participant[] {
+    return this.participants.filter((p) => ids.includes(p.id));
+  }
+
+  // -----------------------------------------------------
+  // Expenses
+
   getExpenses() {
     return [...this.expenses];
   }
+
+  getExpensesBySharedExpense(sharedExpenseId: string): Expense[] {
+    return this.expenses.filter((e) => e.sharedExpenseId === sharedExpenseId);
+  }
+
   addExpense(expense: Expense, currentView: ViewType, store: AppStore) {
     expenseService
       .createExpense(expense)
@@ -42,7 +58,7 @@ export default class AppStore {
         console.log("expense created id ==> ", expenseId);
       })
       .catch((error) => console.log("fail to create the expense ==> ", error))
-      .finally(() => this.notifyRender(currentView, store));
+      .finally(() => this.state.setCurrentView(currentView, store));
   }
 
   deleteExpense(id: string, currentView: ViewType, store: AppStore) {
@@ -52,12 +68,20 @@ export default class AppStore {
         this.expenses = this.expenses.filter((e) => e.id !== id);
       })
       .catch((error) => console.log("fail to delete the expense ==> ", error))
-      .finally(() => this.notifyRender(currentView, store));
+      .finally(() => this.state.setCurrentView(currentView, store));
   }
+
+  // -------------------------------------------------------------
+  // Payments
 
   getPayments() {
     return [...this.payments];
   }
+
+  getPaymentsBySharedExpense(sharedExpenseId: string): Payment[] {
+    return this.payments.filter((p) => p.sharedExpenseId === sharedExpenseId);
+  }
+
   addPayment(payment: Payment, currentView: ViewType, store: AppStore) {
     paymentService
       .createPayment(payment)
@@ -67,7 +91,7 @@ export default class AppStore {
         console.log("payment created id ==> ", paymentId);
       })
       .catch((error) => console.log("fail to create the payment ==> ", error))
-      .finally(() => this.notifyRender(currentView, store));
+      .finally(() => this.state.setCurrentView(currentView, store));
   }
   deletePayment(id: string, currentView: ViewType, store: AppStore) {
     paymentService
@@ -76,74 +100,82 @@ export default class AppStore {
         this.payments = this.payments.filter((p) => p.id !== id);
       })
       .catch((error) => console.log("fail to delete the expense ==> ", error))
-      .finally(() => this.notifyRender(currentView, store));
+      .finally(() => this.state.setCurrentView(currentView, store));
   }
 
+  // ---------------------------------------
   // Shared Expenses
-  getCurrentSharedExpenseId(): string | null {
-    return this.currentSharedExpenseId;
+  getSharedExpenses(): SharedExpense[] {
+    return [...this.sharedExpenses];
   }
+
   getSharedExpense(id: string): SharedExpense | undefined {
     return this.sharedExpenses.find((se) => se.id === id);
   }
 
-  // loadFromStorage() {
-  //   participantService
-  //     .createParticipantList()
-  //     .then((participantIds) => {
-  //       if (participantIds.length > 0) {
-  //         return true;
-  //       }
-  //       return false;
-  //     })
-  //     .then((created) => {
-  //       if (created) {
-  //         return participantService.getParticipants();
-  //       }
-  //       return [];
-  //     })
-  //     .then((participants) => {
-  //       this.participants = participants;
-  //       console.log("participants loaded ==> ", participants);
-  //     })
-  //     .catch((error) =>
-  //       console.log("error loading data from firebase ==> ", error)
-  //     )
-  //     .finally(() => this.notifyRender("dashboard", this));
-  // }
+  addSharedExpense(sharedExpense: SharedExpense): void {
+    this.sharedExpenses.push(sharedExpense);
+    // this.saveToStorage();
+    // this.notify();
+  }
+
+  updateSharedExpense(id: string, updates: Partial<SharedExpense>): void {
+    const index = this.sharedExpenses.findIndex((se) => se.id === id);
+    if (index !== -1) {
+      this.sharedExpenses[index] = {
+        ...this.sharedExpenses[index],
+        ...updates,
+      };
+      // this.saveToStorage();
+      // this.notify();
+    }
+  }
+
+  closeSharedExpense(id: string): void {
+    this.updateSharedExpense(id, {
+      status: "closed",
+      closedAt: new Date().toISOString(),
+    });
+  }
+
+  getCurrentSharedExpenseId(): string | null {
+    return this.currentSharedExpenseId;
+  }
+
+  setCurrentSharedExpenseId(id: string | null): void {
+    this.currentSharedExpenseId = id;
+    // this.notify();
+  }
 
   loadFromStorage() {
-    Promise.all([
-      expenseService.getExpenses(),
-      paymentService.getPayments(),
-      participantService.getParticipants(),
-    ])
-      .then((data) => {
-        this.expenses = data[0];
-        console.log("expenses loaded ==> ", data[0]);
-
-        this.payments = data[1];
-        console.log("payments loaded ==> ", data[1]);
-
-        this.participants = data[2];
-        console.log("participants loaded ==> ", data[2]);
+    this.loadData()
+      .then(() => {
+        if (this.participants.length === 0) {
+          participantService
+            .createParticipantList()
+            .then(() => this.loadData());
+        }
       })
       .catch((error) =>
         console.log("error loading data from firebase ==> ", error)
       )
-      .finally(() => this.notifyRender("dashboard", this));
+      .finally(() => this.state.setCurrentView("dashboard", this));
   }
 
-  subscribeRender(render: Render): () => void {
-    this.renderList.push(render);
+  private loadData = async () => {
+    return Promise.all([
+      expenseService.getExpenses(),
+      paymentService.getPayments(),
+      participantService.getParticipants(),
+    ]).then((data) => {
+      this.expenses = data[0];
+      console.log("expenses loaded ==> ", data[0]);
 
-    // return the unsubscribe function
-    return () => {
-      this.renderList = this.renderList.filter((r: any) => r !== render);
-    };
-  }
+      this.payments = data[1];
+      console.log("payments loaded ==> ", data[1]);
 
-  private notifyRender(currentView: ViewType, store: AppStore) {
-    this.renderList.forEach((render: Render) => render(currentView, store));
-  }
+      this.participants = data[2];
+      console.log("participants loaded ==> ", data[2]);
+    });
+  };
 }

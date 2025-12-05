@@ -27,7 +27,7 @@ export class AppStore {
     this.notify();
   }
 
-  getParticipantByIds(ids: string[]): Participant[] {
+  getParticipantsByIds(ids: string[]): Participant[] {
     return this.participants.filter((p) => ids.includes(p.id));
   }
 

@@ -37,7 +37,11 @@ export type ViewType =
   | "add-expense"
   | "add-payment"
   | "history"
-  | "shared-expense-list";
+  | "shared-expense-list"
+  | "create-step-1"
+  | "create-step-2"
+  | "create-step-3";
+export type StepValue = 1 | 2 | 3;
 
 export type SharedExpenseType = "unique" | "recurring";
 export type SharedExpenseStatus = "active" | "closed";
