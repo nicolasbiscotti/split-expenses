@@ -197,11 +197,7 @@ export default class AppStore {
   async loadFromStorage(): Promise<void> {
     try {
       await this.loadData();
-
-      // Cargar el último gasto activo desde cache
       this.loadCachedCurrentExpenseId();
-
-      // Si no hay participantes, crear los por defecto
       if (this.participants.length === 0) {
         await participantService.createParticipantList();
         await this.loadData();
@@ -209,7 +205,6 @@ export default class AppStore {
     } catch (error) {
       console.error("Error loading data from Firebase:", error);
     } finally {
-      // Decidir vista inicial
       const initialView = this.currentSharedExpenseId
         ? "dashboard"
         : "shared-expense-list";
