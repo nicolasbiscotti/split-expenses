@@ -1,16 +1,5 @@
-// export type ViewType =
-//   | "shared-expense-list"
-//   | "create-step-1"
-//   | "create-step-2"
-//   | "create-step-3"
-//   | "dashboard"
-//   | "add-expense"
-//   | "add-payment"
-//   | "history";
-// export type StepValue = 1 | 2 | 3;
-
-import AppStore from "../store";
-import type { StepValue, ViewType } from "../types";
+import type { ViewType, StepValue } from "../types";
+import type AppStore from "../store";
 
 export interface NewSharedExpenseData {
   name: string;
@@ -19,7 +8,7 @@ export interface NewSharedExpenseData {
   participantIds: string[];
 }
 
-type StateListener = (state: AppState, store: AppStore) => void;
+type RenderFunction = (state: AppState, store: AppStore) => void;
 
 export default class AppState {
   private currentView: ViewType = "shared-expense-list";
@@ -30,42 +19,44 @@ export default class AppState {
     type: "unique",
     participantIds: [],
   };
-  private renderList: StateListener[] = [];
+  private renderFunctions: RenderFunction[] = [];
 
-  // Current View
+  // ==================== VIEW MANAGEMENT ====================
   getCurrentView(): ViewType {
     return this.currentView;
   }
 
   setCurrentView(view: ViewType, store: AppStore): void {
     this.currentView = view;
-    this.notifyRender(this, store);
+    this.notify(store);
   }
 
-  // Create Steps
+  // ==================== CREATE STEPS ====================
   getCreateStep(): StepValue {
     return this.createStep;
   }
 
-  setCreateStep(step: StepValue, store: AppStore): void {
+  setCreateStep(step: StepValue): void {
     this.createStep = step;
-    this.currentView = `create-step-${step}` as ViewType;
-    this.notifyRender(this, store);
   }
 
   goToNextStep(store: AppStore): void {
     if (this.createStep < 3) {
-      this.setCreateStep((this.createStep + 1) as StepValue, store);
+      this.createStep = (this.createStep + 1) as StepValue;
+      this.currentView = `create-step-${this.createStep}` as ViewType;
+      this.notify(store);
     }
   }
 
   goToPreviousStep(store: AppStore): void {
     if (this.createStep > 1) {
-      this.setCreateStep((this.createStep - 1) as StepValue, store);
+      this.createStep = (this.createStep - 1) as StepValue;
+      this.currentView = `create-step-${this.createStep}` as ViewType;
+      this.notify(store);
     }
   }
 
-  // New Shared Expense Data
+  // ==================== NEW SHARED EXPENSE DATA ====================
   getNewSharedExpenseData(): NewSharedExpenseData {
     return { ...this.newSharedExpenseData };
   }
@@ -75,46 +66,32 @@ export default class AppState {
       ...this.newSharedExpenseData,
       ...updates,
     };
+    // NO notificamos aquí para evitar re-renders innecesarios en cada tecla
   }
 
   setNewSharedExpenseName(name: string): void {
     this.newSharedExpenseData.name = name;
-    // this.notifyRender();
   }
 
   setNewSharedExpenseDescription(description: string): void {
     this.newSharedExpenseData.description = description;
-    // this.notifyRender();
   }
 
   setNewSharedExpenseType(type: "unique" | "recurring"): void {
     this.newSharedExpenseData.type = type;
-    // this.notifyRender();
   }
 
-  addParticipantToNew(userId: string): void {
-    if (!this.newSharedExpenseData.participantIds.includes(userId)) {
-      this.newSharedExpenseData.participantIds.push(userId);
-      // this.notifyRender();
-    }
-  }
-
-  removeParticipantFromNew(userId: string): void {
-    this.newSharedExpenseData.participantIds =
-      this.newSharedExpenseData.participantIds.filter((id) => id !== userId);
-    // this.notifyRender();
-  }
-
-  toggleParticipantInNew(userId: string): void {
+  toggleParticipantInNew(userId: string, store: AppStore): void {
     const index = this.newSharedExpenseData.participantIds.indexOf(userId);
     if (index === -1) {
-      this.addParticipantToNew(userId);
+      this.newSharedExpenseData.participantIds.push(userId);
     } else {
-      this.removeParticipantFromNew(userId);
+      this.newSharedExpenseData.participantIds.splice(index, 1);
     }
+    this.notify(store); // Notificamos porque cambia la UI
   }
 
-  resetNewSharedExpenseData(store: AppStore): void {
+  resetNewSharedExpenseData(): void {
     this.newSharedExpenseData = {
       name: "",
       description: "",
@@ -122,10 +99,9 @@ export default class AppState {
       participantIds: [],
     };
     this.createStep = 1;
-    this.notifyRender(this, store);
   }
 
-  // Validation
+  // ==================== VALIDATIONS ====================
   canProceedToStep2(): boolean {
     return this.newSharedExpenseData.name.trim().length > 0;
   }
@@ -138,7 +114,12 @@ export default class AppState {
     return this.canProceedToStep2() && this.canProceedToStep3();
   }
 
-  // Navigation Helpers
+  // ==================== NAVIGATION HELPERS ====================
+  startCreateFlow(store: AppStore): void {
+    this.resetNewSharedExpenseData();
+    this.setCurrentView("create-step-1", store);
+  }
+
   goToList(store: AppStore): void {
     this.setCurrentView("shared-expense-list", store);
   }
@@ -159,26 +140,21 @@ export default class AppState {
     this.setCurrentView("history", store);
   }
 
-  startCreateFlow(store: AppStore): void {
-    this.resetNewSharedExpenseData(store);
-    this.setCurrentView("create-step-1", store);
-  }
-
-  // Observers
-  subscribeRender(listener: StateListener): () => void {
-    this.renderList.push(listener);
-
-    // return the unsubscribe function
+  // ==================== OBSERVER PATTERN ====================
+  subscribeRender(renderFn: RenderFunction): () => void {
+    this.renderFunctions.push(renderFn);
     return () => {
-      this.renderList = this.renderList.filter((l) => l !== listener);
+      this.renderFunctions = this.renderFunctions.filter(
+        (fn) => fn !== renderFn
+      );
     };
   }
 
-  private notifyRender(state: AppState, store: AppStore) {
-    this.renderList.forEach((render: StateListener) => render(state, store));
+  private notify(store: AppStore): void {
+    this.renderFunctions.forEach((renderFn) => renderFn(this, store));
   }
 
-  // Debug
+  // ==================== DEBUG ====================
   getState() {
     return {
       currentView: this.currentView,
@@ -186,21 +162,4 @@ export default class AppState {
       newSharedExpenseData: this.newSharedExpenseData,
     };
   }
-
-  setState(config?: {
-    rerender?: boolean;
-    store?: AppStore;
-    view?: ViewType;
-    step?: StepValue;
-  }) {
-    this.currentView = config?.view || this.currentView;
-    this.createStep = config?.step || this.createStep;
-    // this.newSharedExpenseData = state.getNewSharedExpenseData();
-
-    if (config?.rerender && config.store) {
-      this.notifyRender(this, config.store);
-    }
-  }
 }
-
-// export const state = new AppState();
