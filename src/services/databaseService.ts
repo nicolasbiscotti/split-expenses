@@ -162,17 +162,23 @@ export const expenseService = {
 
 // Payment Operations
 
-const paymentsCollectionPath = `environments/${
-  import.meta.env.VITE_FIRESTORE_DATA_ID
-}/payments`;
+const PAYMENTS_COLLECTION_NAME = "payments";
 
-async function getPaymentsCollectionRef() {
-  return collection(db, paymentsCollectionPath);
+function getPaymentsCollectionPath(sharedExpenseId: string) {
+  return `environments/${
+    import.meta.env.VITE_FIRESTORE_DATA_ID
+  }/${SHARED_EXPENSES_COLLECTION_NAME}/${sharedExpenseId}/${PAYMENTS_COLLECTION_NAME}`;
+}
+
+async function getPaymentsCollectionRef(collectionPath: string) {
+  return collection(db, collectionPath);
 }
 
 export const paymentService = {
   async createPayment(payment: Omit<Payment, "id">): Promise<string> {
-    const paymentsCollectionRef = await getPaymentsCollectionRef();
+    const paymentsCollectionRef = await getPaymentsCollectionRef(
+      getPaymentsCollectionPath(payment.sharedExpenseId)
+    );
 
     const docRef = await addDoc(paymentsCollectionRef, {
       ...payment,
@@ -181,8 +187,14 @@ export const paymentService = {
     return docRef.id;
   },
 
-  async getPayments(): Promise<Payment[]> {
-    const paymentsCollectionRef = await getPaymentsCollectionRef();
+  async getPayments(sharedExpenseId: string): Promise<Payment[]> {
+    if (sharedExpenseId === "") {
+      return Promise.resolve([]);
+    }
+
+    const paymentsCollectionRef = await getPaymentsCollectionRef(
+      getPaymentsCollectionPath(sharedExpenseId)
+    );
 
     const querySnapshot = await getDocs(
       query(paymentsCollectionRef, orderBy("date", "desc"))
@@ -217,8 +229,19 @@ export const paymentService = {
     );
   },
 
-  async deletePayment(id: string): Promise<void> {
-    const docRef = doc(db, paymentsCollectionPath, id);
+  async deletePayment(
+    id: string,
+    currentSharedExpenseId: string
+  ): Promise<void> {
+    if (currentSharedExpenseId === "") {
+      return Promise.reject("No Current Shared Expense Selected");
+    }
+
+    const docRef = doc(
+      db,
+      getPaymentsCollectionPath(currentSharedExpenseId),
+      id
+    );
     await deleteDoc(docRef);
   },
 };
@@ -229,7 +252,7 @@ export const paymentService = {
 
 const sharedExpensesCollectionPath = `environments/${
   import.meta.env.VITE_FIRESTORE_DATA_ID
-}/sharedExpenses`;
+}/${SHARED_EXPENSES_COLLECTION_NAME}`;
 
 async function getSharedExpensesCollectionRef() {
   return collection(db, sharedExpensesCollectionPath);

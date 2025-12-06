@@ -102,7 +102,7 @@ export default class AppStore {
 
   async deletePayment(id: string, currentView: ViewType): Promise<void> {
     try {
-      await paymentService.deletePayment(id);
+      await paymentService.deletePayment(id, this.currentSharedExpenseId || "");
       this.payments = this.payments.filter((p) => p.id !== id);
       console.log("Payment deleted:", id);
     } catch (error) {
@@ -208,7 +208,7 @@ export default class AppStore {
     const [expenses, payments, participants, sharedExpenses] =
       await Promise.all([
         expenseService.getExpenses(this.currentSharedExpenseId || ""),
-        paymentService.getPayments(),
+        paymentService.getPayments(this.currentSharedExpenseId || ""),
         participantService.getParticipants(),
         sharedExpenseService.getAll(), // Necesitas implementar este servicio
       ]);
