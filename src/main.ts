@@ -26,24 +26,26 @@ window.setView = (view: ViewType) => {
 
 window.deleteExpense = (id: string) => {
   if (confirm("¿Eliminar este gasto?")) {
-    store.deleteExpense(id, "history", store);
+    store.deleteExpense(id, "history");
   }
 };
 
 window.deletePayment = (id: string) => {
   if (confirm("¿Eliminar este pago?")) {
-    store.deletePayment(id, "history", store);
+    store.deletePayment(id, "history");
   }
 };
 
-const handleCreateSharedExpense = (event: CreateSharedExpenseEvent) => {
+const handleCreateSharedExpense = (
+  event: CustomEvent<CreateSharedExpenseEvent>
+) => {
   console.log("Event received ==> ", event.detail);
   state.setCurrentView(event.detail.currentView, store);
 };
 
 document.addEventListener(
   "createsharedexpense",
-  handleCreateSharedExpense as unknown as EventListener
+  handleCreateSharedExpense as EventListener
 );
 
 // Event delegation for forms
@@ -64,8 +66,7 @@ document.addEventListener("submit", (e) => {
         description,
         date: new Date().toISOString(),
       } as Expense,
-      "dashboard",
-      store
+      "dashboard"
     );
   }
 
@@ -87,8 +88,7 @@ document.addEventListener("submit", (e) => {
         amount: parseFloat(amount),
         date: new Date().toISOString(),
       } as Payment,
-      "dashboard",
-      store
+      "dashboard"
     );
   }
 });

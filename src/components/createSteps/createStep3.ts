@@ -1,11 +1,9 @@
-// src/components/createSteps/createStep3.ts
-
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpense } from "../../types";
 
 /**
- * Render: Muestra resumen y botón de confirmación
+ * Render: Paso 3 del wizard - Confirmación y creación
  */
 export default function renderCreateStep3(
   state: AppState,
@@ -16,7 +14,10 @@ export default function renderCreateStep3(
 
   return `
     <div class="mb-6">
-      <button id="back-to-step-2" class="text-blue-600 flex items-center gap-1 mb-4">
+      <button 
+        id="back-to-step-2" 
+        class="text-blue-600 flex items-center gap-1 mb-4"
+      >
         ← Volver
       </button>
       <h1 class="text-2xl font-bold text-gray-800">Crear Gasto Compartido</h1>
@@ -56,7 +57,9 @@ export default function renderCreateStep3(
             ${participants
               .map(
                 (p) => `
-              <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${p.name}</span>
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                ${p.name}
+              </span>
             `
               )
               .join("")}
@@ -69,18 +72,24 @@ export default function renderCreateStep3(
       <p class="text-sm text-blue-800">
         ${
           data.type === "unique"
-            ? "✓ Este gasto compartido estará activo hasta que lo cierres manualmente."
-            : "✓ Este gasto compartido será recurrente. Podrás cerrar períodos y crear nuevos."
+            ? "✓ Este gasto compartido estará activo hasta que lo cierres manualmente cuando los balances estén correctos."
+            : "✓ Este gasto compartido será recurrente. Podrás cerrar períodos y crear nuevos cuando lo necesites."
         }
       </p>
     </div>
 
     <button 
       id="create-shared-expense-btn"
-      class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition"
+      class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center"
     >
       <span id="button-text">Crear Gasto Compartido</span>
-      <span id="button-loading" class="hidden">Creando...</span>
+      <span id="button-loading" class="hidden">
+        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-2">Creando...</span>
+      </span>
     </button>
   `;
 }
@@ -118,6 +127,11 @@ export function setupCreateStep3(
     try {
       const data = state.getNewSharedExpenseData();
 
+      // Validación final
+      if (!state.isNewSharedExpenseValid()) {
+        throw new Error("Datos inválidos");
+      }
+
       // Crear el objeto SharedExpense
       const newSharedExpense: SharedExpense = {
         id: "", // Firebase generará el ID
@@ -129,11 +143,9 @@ export function setupCreateStep3(
         createdAt: new Date().toISOString(),
       };
 
-      // Guardar en la base de datos a través del store
+      // Guardar en la base de datos
+      // NOTA: Debes implementar createSharedExpense en AppStore
       await store.createSharedExpense(newSharedExpense);
-
-      // El store ya debería haber guardado el ID del nuevo shared expense
-      // y haberlo seteado como currentSharedExpenseId
 
       // Limpiar datos temporales
       state.resetNewSharedExpenseData();
@@ -157,15 +169,3 @@ export function setupCreateStep3(
   backButton?.addEventListener("click", handleBack);
   createButton?.addEventListener("click", handleCreate);
 }
-
-/**
- * Nota: El método store.createSharedExpense() debería verse así:
- *
- * async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
- *   const id = await sharedExpenseService.create(sharedExpense);
- *   sharedExpense.id = id;
- *   this.sharedExpenses.push(sharedExpense);
- *   this.setCurrentSharedExpenseId(id); // Cache en localStorage
- *   return id;
- * }
- */

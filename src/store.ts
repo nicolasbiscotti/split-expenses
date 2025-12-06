@@ -124,18 +124,10 @@ export default class AppStore {
 
   async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
     try {
-      // Crear en Firebase (debe retornar el ID generado)
       const sharedExpenseId = await sharedExpenseService.create(sharedExpense);
-
-      // Actualizar el objeto con el ID
       sharedExpense.id = sharedExpenseId;
-
-      // Agregar a la lista local
       this.sharedExpenses.push(sharedExpense);
-
-      // Establecer como gasto compartido actual (guarda en cache)
       this.setCurrentSharedExpenseId(sharedExpenseId);
-
       console.log("Shared expense created with id:", sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {
@@ -172,7 +164,6 @@ export default class AppStore {
   setCurrentSharedExpenseId(id: string | null): void {
     this.currentSharedExpenseId = id;
 
-    // Guardar en localStorage como cache
     if (id) {
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
@@ -235,23 +226,3 @@ export default class AppStore {
     });
   }
 }
-
-/**
- * NOTA: Necesitas crear sharedExpenseService en databaseService.ts:
- *
- * export const sharedExpenseService = {
- *   create: async (data: Omit<SharedExpense, 'id'>): Promise<string> => {
- *     const docRef = await addDoc(collection(db, 'sharedExpenses'), data);
- *     return docRef.id;
- *   },
- *
- *   getAll: async (): Promise<SharedExpense[]> => {
- *     const snapshot = await getDocs(collection(db, 'sharedExpenses'));
- *     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SharedExpense));
- *   },
- *
- *   update: async (id: string, updates: Partial<SharedExpense>): Promise<void> => {
- *     await updateDoc(doc(db, 'sharedExpenses', id), updates);
- *   }
- * };
- */

@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-import type { Expense, Payment, Participant } from "../types";
+import type { Expense, Payment, Participant, SharedExpense } from "../types";
 
 // Participant Operations
 export const participantService = {
@@ -58,6 +58,8 @@ export const participantService = {
     );
   },
 };
+
+// --------------------------------------------------
 
 // Expense Operations
 const expensesCollectionPath = `environments/${
@@ -131,7 +133,10 @@ export const expenseService = {
   },
 };
 
+// --------------------------------------------------
+
 // Payment Operations
+
 const paymentsCollectionPath = `environments/${
   import.meta.env.VITE_FIRESTORE_DATA_ID
 }/payments`;
@@ -192,3 +197,40 @@ export const paymentService = {
     await deleteDoc(docRef);
   },
 };
+
+// --------------------------------------------------
+
+// Shared Expenses Operation
+
+const sharedExpensesCollectionPath = `environments/${
+  import.meta.env.VITE_FIRESTORE_DATA_ID
+}/sharedExpenses`;
+
+async function getSharedExpensesCollectionRef() {
+  return collection(db, sharedExpensesCollectionPath);
+}
+
+export const sharedExpenseService = {
+  create: async (data: Omit<SharedExpense, "id">): Promise<string> => {
+    const collectionRef = await getSharedExpensesCollectionRef();
+    const docRef = await addDoc(collectionRef, data);
+    return docRef.id;
+  },
+
+  getAll: async (): Promise<SharedExpense[]> => {
+    const collectionRef = await getSharedExpensesCollectionRef();
+    const snapshot = await getDocs(collectionRef);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() } as SharedExpense)
+    );
+  },
+
+  update: async (
+    id: string,
+    updates: Partial<SharedExpense>
+  ): Promise<void> => {
+    await updateDoc(doc(db, "sharedExpenses", id), updates);
+  },
+};
+
+// --------------------------------------------------
