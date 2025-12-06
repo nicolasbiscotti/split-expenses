@@ -147,8 +147,7 @@ export function setupSharedExpenseList(
 
   // Handler: Seleccionar un gasto compartido
   const handleSelectSharedExpense = (id: string) => {
-    store.setCurrentSharedExpenseId(id);
-    state.goToDashboard(store);
+    store.setCurrentSharedExpenseId(id).then(() => state.goToDashboard(store));
   };
 
   // Event listeners para botones de crear
@@ -157,10 +156,14 @@ export function setupSharedExpenseList(
 
   // Event delegation para las tarjetas
   list?.addEventListener("click", (e) => {
+    console.log("Card Clicked ==> ");
+
     const card = (e.target as HTMLElement).closest(".shared-expense-card");
     if (card) {
+      console.log("Card ==> ", card);
       const expenseId = card.getAttribute("data-expense-id");
       if (expenseId) {
+        console.log("expense id ==> ", expenseId);
         handleSelectSharedExpense(expenseId);
       }
     }

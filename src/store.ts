@@ -124,7 +124,14 @@ export default class AppStore {
 
   async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
     try {
-      const sharedExpenseId = await sharedExpenseService.create(sharedExpense);
+      const sharedExpenseId = await sharedExpenseService.create({
+        name: sharedExpense.name,
+        description: sharedExpense.description,
+        type: sharedExpense.type,
+        status: sharedExpense.status,
+        participantIds: sharedExpense.participantIds,
+        createdAt: sharedExpense.createdAt,
+      });
       sharedExpense.id = sharedExpenseId;
       this.sharedExpenses.push(sharedExpense);
       this.setCurrentSharedExpenseId(sharedExpenseId);
@@ -161,10 +168,11 @@ export default class AppStore {
     return this.currentSharedExpenseId;
   }
 
-  setCurrentSharedExpenseId(id: string | null): void {
+  async setCurrentSharedExpenseId(id: string | null) {
     this.currentSharedExpenseId = id;
 
     if (id) {
+      await this.loadData();
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
@@ -224,5 +232,7 @@ export default class AppStore {
       participants: participants.length,
       sharedExpenses: sharedExpenses.length,
     });
+
+    console.log("Shared Expenses loaded:", sharedExpenses);
   }
 }

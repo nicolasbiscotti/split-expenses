@@ -2,7 +2,7 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
-import type { ViewType } from "./types";
+import type { Expense, Payment, ViewType } from "./types";
 
 // ==================== INIT ====================
 const state = new AppState();
@@ -53,13 +53,12 @@ document.addEventListener("submit", async (e) => {
     try {
       await store.addExpense(
         {
-          id: "",
           sharedExpenseId: currentExpenseId,
           payerId: formData.get("payerId") as string,
           amount: parseFloat(formData.get("amount") as string),
           description: formData.get("description") as string,
           date: new Date().toISOString(),
-        },
+        } as Expense,
         "dashboard"
       );
     } catch (error) {
@@ -87,13 +86,12 @@ document.addEventListener("submit", async (e) => {
     try {
       await store.addPayment(
         {
-          id: "",
           sharedExpenseId: currentExpenseId,
           fromId,
           toId,
           amount: parseFloat(formData.get("amount") as string),
           date: new Date().toISOString(),
-        },
+        } as Payment,
         "dashboard"
       );
     } catch (error) {
