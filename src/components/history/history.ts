@@ -1,4 +1,4 @@
-import type AppStore from "../store";
+import type AppStore from "../../store";
 
 export default function renderHistory(store: AppStore) {
   const expenses = store.getExpenses();

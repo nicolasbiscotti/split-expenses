@@ -1,5 +1,5 @@
-import type AppStore from "../store";
-import { calculateBalances, calculateDebts } from "../util/calculations";
+import type AppStore from "../../store";
+import { calculateBalances, calculateDebts } from "../../util/calculations";
 import renderDebtList from "./debtList";
 
 export default function renderDashboard(store: AppStore) {

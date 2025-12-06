@@ -1,4 +1,4 @@
-import type { Debt, Participant } from "../types";
+import type { Debt, Participant } from "../../types";
 
 export default function renderDebtList(debts: Debt[], participants: Participant[]) {
   return `${

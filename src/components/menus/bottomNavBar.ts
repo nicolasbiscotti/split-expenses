@@ -1,5 +1,5 @@
-import type AppState from "../state/AppState";
-import type { SharedExpense } from "../types";
+import type AppState from "../../state/AppState";
+import type { SharedExpense } from "../../types";
 
 export default function bottomNavBar(
   state: AppState,
