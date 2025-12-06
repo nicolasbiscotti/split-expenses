@@ -66,7 +66,7 @@ export default class AppStore {
 
   async deleteExpense(id: string, currentView: ViewType): Promise<void> {
     try {
-      await expenseService.deleteExpense(id);
+      await expenseService.deleteExpense(id, this.currentSharedExpenseId || "");
       this.expenses = this.expenses.filter((e) => e.id !== id);
       console.log("Expense deleted:", id);
     } catch (error) {
@@ -187,8 +187,8 @@ export default class AppStore {
   // ==================== LOAD FROM STORAGE ====================
   async loadFromStorage(): Promise<void> {
     try {
-      await this.loadData();
       this.loadCachedCurrentExpenseId();
+      await this.loadData();
       if (this.participants.length === 0) {
         await participantService.createParticipantList();
         await this.loadData();
@@ -207,7 +207,7 @@ export default class AppStore {
   private async loadData(): Promise<void> {
     const [expenses, payments, participants, sharedExpenses] =
       await Promise.all([
-        expenseService.getExpenses(),
+        expenseService.getExpenses(this.currentSharedExpenseId || ""),
         paymentService.getPayments(),
         participantService.getParticipants(),
         sharedExpenseService.getAll(), // Necesitas implementar este servicio

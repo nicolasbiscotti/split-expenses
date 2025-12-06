@@ -14,6 +14,8 @@ import { db } from "../firebase/config";
 
 import type { Expense, Payment, Participant, SharedExpense } from "../types";
 
+const SHARED_EXPENSES_COLLECTION_NAME = "sharedExpenses";
+
 // Participant Operations
 export const participantService = {
   async createParticipant(
@@ -62,18 +64,24 @@ export const participantService = {
 // --------------------------------------------------
 
 // Expense Operations
-const expensesCollectionPath = `environments/${
-  import.meta.env.VITE_FIRESTORE_DATA_ID
-}/expenses`;
+const EXPENSES_COLLECTION_NAME = "expenses";
 
-async function getExpensesCollectionRef() {
-  return collection(db, expensesCollectionPath);
+function getExpensesCollectionPath(sharedExpenseId: string) {
+  return `environments/${
+    import.meta.env.VITE_FIRESTORE_DATA_ID
+  }/${SHARED_EXPENSES_COLLECTION_NAME}/${sharedExpenseId}/${EXPENSES_COLLECTION_NAME}`;
+}
+
+async function getExpensesCollectionRef(collectionPath: string) {
+  return collection(db, collectionPath);
 }
 
 export const expenseService = {
   // Create new expense
   async createExpense(expense: Omit<Expense, "id">): Promise<string> {
-    const collectionRef = await getExpensesCollectionRef();
+    const collectionRef = await getExpensesCollectionRef(
+      getExpensesCollectionPath(expense.sharedExpenseId)
+    );
 
     const docRef = await addDoc(collectionRef, {
       ...expense,
@@ -83,8 +91,14 @@ export const expenseService = {
   },
 
   // Get all expenses
-  async getExpenses(): Promise<Expense[]> {
-    const collectionRef = await getExpensesCollectionRef();
+  async getExpenses(sharedExpenseId: string): Promise<Expense[]> {
+    if (sharedExpenseId === "") {
+      return Promise.resolve([]);
+    }
+
+    const collectionRef = await getExpensesCollectionRef(
+      getExpensesCollectionPath(sharedExpenseId)
+    );
 
     const querySnapshot = await getDocs(
       query(collectionRef, orderBy("date", "desc"))
@@ -102,7 +116,7 @@ export const expenseService = {
   // Get expenses by participant
   async getExpensesByUser(participantId: string): Promise<Expense[]> {
     const q = query(
-      collection(db, "expenses"),
+      collection(db, EXPENSES_COLLECTION_NAME),
       where("payerId", "==", participantId),
       orderBy("date", "desc")
     );
@@ -122,13 +136,24 @@ export const expenseService = {
     id: string,
     updates: Partial<Omit<Expense, "id">>
   ): Promise<void> {
-    const docRef = doc(db, "expenses", id);
+    const docRef = doc(db, EXPENSES_COLLECTION_NAME, id);
     await updateDoc(docRef, updates);
   },
 
   // Delete expense
-  async deleteExpense(id: string): Promise<void> {
-    const docRef = doc(db, expensesCollectionPath, id);
+  async deleteExpense(
+    id: string,
+    currentSharedExpenseId: string
+  ): Promise<void> {
+    if (currentSharedExpenseId === "") {
+      return Promise.reject("No Current Shared Expense Selected");
+    }
+
+    const docRef = doc(
+      db,
+      getExpensesCollectionPath(currentSharedExpenseId),
+      id
+    );
     await deleteDoc(docRef);
   },
 };
@@ -229,7 +254,7 @@ export const sharedExpenseService = {
     id: string,
     updates: Partial<SharedExpense>
   ): Promise<void> => {
-    await updateDoc(doc(db, "sharedExpenses", id), updates);
+    await updateDoc(doc(db, sharedExpensesCollectionPath, id), updates);
   },
 };
 
