@@ -37,9 +37,9 @@ export default class AppStore {
     return this.participants.filter((p) => ids.includes(p.id));
   }
 
-  addParticipant(participant: Participant): void {
-    // Implementar si es necesario
-  }
+  // addParticipant(participant: Participant): void {
+  //   // Implementar si es necesario
+  // }
 
   // ==================== EXPENSES ====================
   getExpenses(): Expense[] {

@@ -5,7 +5,7 @@ import type AppStore from "../../store";
  * Render: Formulario para agregar gastos
  */
 export default function renderExpenseForm(
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): string {
   const participants = store.getParticipants();

@@ -5,7 +5,7 @@ import type AppStore from "../../store";
  * Render: Lista de gastos compartidos o estado vacío
  */
 export default function renderSharedExpenseList(
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): string {
   const sharedExpenses = store.getSharedExpenses();
@@ -146,8 +146,9 @@ export function setupSharedExpenseList(
   };
 
   // Handler: Seleccionar un gasto compartido
-  const handleSelectSharedExpense = (id: string) => {
-    store.setCurrentSharedExpenseId(id).then(() => state.goToDashboard(store));
+  const handleSelectSharedExpense = async (id: string) => {
+    await store.setCurrentSharedExpenseId(id);
+    state.goToDashboard(store);
   };
 
   // Event listeners para botones de crear

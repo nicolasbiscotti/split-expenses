@@ -7,7 +7,7 @@ import type AppStore from "../../store";
  * Render: Historial de gastos y pagos
  */
 export default function renderHistory(
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): string {
   const expenses = store.getExpenses();
@@ -134,7 +134,7 @@ function renderPaymentItem(payment: any, participants: any[]): string {
  */
 export function setupHistory(
   container: HTMLElement,
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): void {
   // Handler: Eliminar gasto

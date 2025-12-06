@@ -7,7 +7,7 @@ import renderDebtList from "../dashboard/debtList";
  * Render: Formulario para registrar pagos + sugerencias de deudas
  */
 export default function renderPaymentForm(
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): string {
   const participants = store.getParticipants();

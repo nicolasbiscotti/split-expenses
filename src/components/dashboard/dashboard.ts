@@ -7,7 +7,7 @@ import renderDebtList from "./debtList";
  * Render: Dashboard principal con resumen y balances
  */
 export default function renderDashboard(
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): string {
   const participants = store.getParticipants();
@@ -88,9 +88,9 @@ function renderBalanceItem(balance: any, participants: any[]): string {
  * Todo se maneja a través de la navegación del bottomNavBar
  */
 export function setupDashboard(
-  container: HTMLElement,
-  state: AppState,
-  store: AppStore
+  _container: HTMLElement,
+  _state: AppState,
+  _store: AppStore
 ): void {
   // El dashboard es principalmente de lectura
   // Las acciones (agregar gasto, pago) se manejan desde el navbar
