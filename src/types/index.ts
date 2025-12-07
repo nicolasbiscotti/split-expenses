@@ -1,3 +1,9 @@
+export * from "./auth";
+
+/**
+ * Participant - DEPRECATED, usar User directamente
+ * Mantener por compatibilidad temporal
+ */
 export interface Participant {
   id: string;
   name: string;
@@ -6,42 +12,39 @@ export interface Participant {
 export interface Expense {
   id: string;
   sharedExpenseId: string;
-  payerId: string;
+  payerId: string; // User UID
   amount: number;
   description: string;
   date: string;
+
+  // Auditoría
+  createdBy: string; // User UID
+  createdByAdmin: boolean; // Si fue creado por un admin
 }
 
 export interface Payment {
   id: string;
   sharedExpenseId: string;
-  fromId: string;
-  toId: string;
+  fromId: string; // User UID
+  toId: string; // User UID
   amount: number;
   date: string;
+
+  // Auditoría
+  createdBy: string;
+  createdByAdmin: boolean;
 }
 
 export interface Balance {
-  participantId: string;
+  userId: string; // User UID
   balance: number;
 }
 
 export interface Debt {
-  fromId: string;
-  toId: string;
+  fromId: string; // User UID
+  toId: string; // User UID
   amount: number;
 }
-
-export type ViewType =
-  | "dashboard"
-  | "add-expense"
-  | "add-payment"
-  | "history"
-  | "shared-expense-list"
-  | "create-step-1"
-  | "create-step-2"
-  | "create-step-3";
-export type StepValue = 1 | 2 | 3;
 
 export type SharedExpenseType = "unique" | "recurring";
 export type SharedExpenseStatus = "active" | "closed";
@@ -52,11 +55,16 @@ export interface SharedExpense {
   description: string;
   type: SharedExpenseType;
   status: SharedExpenseStatus;
-  participantIds: string[];
+
   totalAmount: number;
   createdAt: string;
   closedAt?: string;
-  periodName?: string; // Para recurrentes: "Enero 2025"
+  periodName?: string;
+
+  // Ownership y roles
+  createdBy: string; // User UID del creador
+  administrators: string[]; // Array de User UIDs
+  participants: string[]; // Array de User UIDs (incluye admins)
 }
 
 export interface Period {
@@ -67,3 +75,19 @@ export interface Period {
   endDate?: string;
   status: SharedExpenseStatus;
 }
+
+// View types
+export type ViewType =
+  | "login"
+  | "shared-expense-list"
+  | "create-step-1"
+  | "create-step-2"
+  | "create-step-3"
+  | "dashboard"
+  | "add-expense"
+  | "add-payment"
+  | "history"
+  | "manage-participants"
+  | "user-profile";
+
+export type StepValue = 1 | 2 | 3;
