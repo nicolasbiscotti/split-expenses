@@ -1,51 +1,191 @@
 import type AppStore from "./store";
-import renderDashboard from "./dashboard/dashboard";
-import renderExpenseForm from "./expenseForm/expenseForm";
-import renderPaymentForm from "./paymentForm/paymentForm";
-import renderHistory from "./history/history";
+import type AppState from "./state/AppState";
 
-export default function render(currentView: string, store: AppStore) {
-  const app = document.getElementById("app")!;
+// Dashboard
+import renderDashboard, {
+  setupDashboard,
+} from "./components/dashboard/dashboard";
+
+// Forms
+import renderExpenseForm, {
+  setupExpenseForm,
+} from "./components/expenseForm/expenseForm";
+import renderPaymentForm, {
+  setupPaymentForm,
+} from "./components/paymentForm/paymentForm";
+
+// History
+import renderHistory, { setupHistory } from "./components/history/history";
+
+// Navigation
+import bottomNavBar from "./components/menus/bottomNavBar";
+
+// Shared Expense List
+import renderSharedExpenseList, {
+  setupSharedExpenseList,
+} from "./components/sharedExpenseList/sharedExpenseList";
+
+// Create Steps
+import renderCreateStep1, {
+  setupCreateStep1,
+} from "./components/createSteps/createStep1";
+
+import renderCreateStep2, {
+  setupCreateStep2,
+} from "./components/createSteps/createStep2";
+
+import renderCreateStep3, {
+  setupCreateStep3,
+} from "./components/createSteps/createStep3";
+
+/**
+ * Función principal de renderizado
+ * Se ejecuta cada vez que cambia el estado
+ */
+export default function render(state: AppState, store: AppStore): void {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const currentId = store.getCurrentSharedExpenseId();
+  const currentSharedExpense = currentId
+    ? store.getSharedExpense(currentId)
+    : null;
+  const currentView = state.getCurrentView();
+
+  // Determinar si necesita padding bottom para la navegación
+  const needsBottomPadding =
+    currentView !== "shared-expense-list" && !currentView.startsWith("create");
+
+  // Renderizar el HTML
   app.innerHTML = `
-        <div class="max-w-lg mx-auto p-4 pb-20">
-          <header class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">💰 Split Expenses</h1>
-            <p class="text-gray-600">Gestiona gastos compartidos</p>
-          </header>
+    <div class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
+      ${renderViewContent(currentView, state, store)}
+    </div>
 
-          ${currentView === "dashboard" ? renderDashboard(store) : ""}
-          ${currentView === "add-expense" ? renderExpenseForm(store) : ""}
-          ${currentView === "add-payment" ? renderPaymentForm(store) : ""}
-          ${currentView === "history" ? renderHistory(store) : ""}
-        </div>
+    ${needsBottomPadding ? bottomNavBar(state, currentSharedExpense) : ""}
+  `;
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
-          <div class="max-w-lg mx-auto flex justify-around py-3">
-            <button onclick="setView('dashboard')" class="flex flex-col items-center ${
-              currentView === "dashboard" ? "text-blue-600" : "text-gray-600"
-            }">
-              <span class="text-2xl">📊</span>
-              <span class="text-xs">Dashboard</span>
-            </button>
-            <button onclick="setView('add-expense')" class="flex flex-col items-center ${
-              currentView === "add-expense" ? "text-blue-600" : "text-gray-600"
-            }">
-              <span class="text-2xl">➕</span>
-              <span class="text-xs">Gasto</span>
-            </button>
-            <button onclick="setView('add-payment')" class="flex flex-col items-center ${
-              currentView === "add-payment" ? "text-blue-600" : "text-gray-600"
-            }">
-              <span class="text-2xl">💸</span>
-              <span class="text-xs">Pago</span>
-            </button>
-            <button onclick="setView('history')" class="flex flex-col items-center ${
-              currentView === "history" ? "text-blue-600" : "text-gray-600"
-            }">
-              <span class="text-2xl">📜</span>
-              <span class="text-xs">Historial</span>
-            </button>
-          </div>
-        </nav>
-      `;
+  // Ejecutar setup functions después del render
+  setupViewInteractions(currentView, state, store);
+}
+
+/**
+ * Renderiza el contenido de la vista actual
+ */
+function renderViewContent(
+  view: string,
+  state: AppState,
+  store: AppStore
+): string {
+  switch (view) {
+    case "shared-expense-list":
+      return renderSharedExpenseList(state, store);
+
+    case "create-step-1":
+      return renderCreateStep1(state);
+
+    case "create-step-2":
+      return renderCreateStep2(state, store);
+
+    case "create-step-3":
+      return renderCreateStep3(state, store);
+
+    case "dashboard":
+      return renderDashboard(state, store);
+
+    case "add-expense":
+      return renderExpenseForm(state, store);
+
+    case "add-payment":
+      return renderPaymentForm(state, store);
+
+    case "history":
+      return renderHistory(state, store);
+
+    default:
+      return '<div class="text-center p-8">Vista no encontrada</div>';
+  }
+}
+
+/**
+ * Configura las interacciones de la vista actual
+ * Aquí es donde llamamos a los setup functions
+ */
+function setupViewInteractions(
+  view: string,
+  state: AppState,
+  store: AppStore
+): void {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  switch (view) {
+    case "shared-expense-list": {
+      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      if (container) {
+        setupSharedExpenseList(container, state, store);
+      }
+      break;
+    }
+
+    case "create-step-1": {
+      const form = app.querySelector<HTMLFormElement>("#create-step-1-form");
+      if (form) {
+        setupCreateStep1(form, state, store);
+      }
+      break;
+    }
+
+    case "create-step-2": {
+      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      if (container) {
+        setupCreateStep2(container, state, store);
+      }
+      break;
+    }
+
+    case "create-step-3": {
+      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      if (container) {
+        setupCreateStep3(container, state, store);
+      }
+      break;
+    }
+
+    case "dashboard": {
+      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      if (container) {
+        setupDashboard(container, state, store);
+      }
+      break;
+    }
+
+    case "add-expense": {
+      const form = app.querySelector<HTMLFormElement>("#expense-form");
+      if (form) {
+        setupExpenseForm(form, state, store);
+      }
+      break;
+    }
+
+    case "add-payment": {
+      const form = app.querySelector<HTMLFormElement>("#payment-form");
+      if (form) {
+        setupPaymentForm(form, state, store);
+      }
+      break;
+    }
+
+    case "history": {
+      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      if (container) {
+        setupHistory(container, state, store);
+      }
+      break;
+    }
+
+    default:
+      // Vistas que no necesitan setup específico
+      break;
+  }
 }

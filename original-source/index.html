@@ -18,7 +18,7 @@
       // ==================== STORE ====================
       class AppStore {
         constructor() {
-          this.users = [];
+          this.participants = [];
           this.expenses = [];
           this.payments = [];
           this.sharedExpenses = [];
@@ -27,14 +27,14 @@
           this.loadFromStorage();
         }
 
-        getUsers() {
-          return [...this.users];
+        getParticipants() {
+          return [...this.participants];
         }
-        getUsersByIds(ids) {
-          return this.users.filter((u) => ids.includes(u.id));
+        getParticipantsByIds(ids) {
+          return this.participants.filter((u) => ids.includes(u.id));
         }
-        addUser(user) {
-          this.users.push(user);
+        addParticipant(participant) {
+          this.participants.push(participant);
           this.saveToStorage();
           this.notify();
         }
@@ -113,7 +113,7 @@
         saveToStorage() {
           localStorage.setItem(
             "splitexpenses_users",
-            JSON.stringify(this.users)
+            JSON.stringify(this.participants)
           );
           localStorage.setItem(
             "splitexpenses_expenses",
@@ -140,14 +140,14 @@
           const sharedData = localStorage.getItem("splitexpenses_shared");
           const currentData = localStorage.getItem("splitexpenses_current");
 
-          if (usersData) this.users = JSON.parse(usersData);
+          if (usersData) this.participants = JSON.parse(usersData);
           if (expensesData) this.expenses = JSON.parse(expensesData);
           if (paymentsData) this.payments = JSON.parse(paymentsData);
           if (sharedData) this.sharedExpenses = JSON.parse(sharedData);
           if (currentData) this.currentSharedExpenseId = currentData || null;
 
-          if (this.users.length === 0) {
-            this.users = [
+          if (this.participants.length === 0) {
+            this.participants = [
               { id: "1", name: "Juan" },
               { id: "2", name: "Valeria" },
               { id: "3", name: "Juana" },
@@ -171,17 +171,17 @@
       }
 
       // ==================== CALCULATIONS ====================
-      function calculateBalances(users, expenses, payments) {
+      function calculateBalances(participants, expenses, payments) {
         const balances = new Map();
-        users.forEach((user) => balances.set(user.id, 0));
+        participants.forEach((participant) => balances.set(participant.id, 0));
 
         const totalExpenses = expenses.reduce(
           (sum, exp) => sum + exp.amount,
           0
         );
-        const sharePerPerson = totalExpenses / users.length;
+        const sharePerPerson = totalExpenses / participants.length;
 
-        users.forEach((user) => balances.set(user.id, -sharePerPerson));
+        participants.forEach((participant) => balances.set(participant.id, -sharePerPerson));
         expenses.forEach((expense) => {
           const current = balances.get(expense.payerId) || 0;
           balances.set(expense.payerId, current + expense.amount);
@@ -194,8 +194,8 @@
           balances.set(payment.toId, toBalance - payment.amount);
         });
 
-        return Array.from(balances.entries()).map(([userId, balance]) => ({
-          userId,
+        return Array.from(balances.entries()).map(([participantId, balance]) => ({
+          participantId,
           balance: Math.round(balance * 100) / 100,
         }));
       }
@@ -224,8 +224,8 @@
           );
 
           debts.push({
-            fromId: debtor.userId,
-            toId: creditor.userId,
+            fromId: debtor.participantId,
+            toId: creditor.participantId,
             amount: Math.round(settleAmount * 100) / 100,
           });
 
@@ -376,7 +376,7 @@
                 (sum, e) => sum + e.amount,
                 0
               );
-              const participants = store.getUsersByIds(se.participantIds);
+              const participants = store.getParticipantsByIds(se.participantIds);
 
               return `
               <div onclick="selectSharedExpense('${
@@ -495,7 +495,7 @@
       }
 
       function renderCreateStep2() {
-        const allUsers = store.getUsers();
+        const allUsers = store.getParticipants();
         const selectedIds = newSharedExpenseData.participantIds;
 
         return `
@@ -520,20 +520,20 @@
           <div class="space-y-2">
             ${allUsers
               .map(
-                (user) => `
+                (participant) => `
               <label class="flex items-center gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 ${
-                selectedIds.includes(user.id)
+                selectedIds.includes(participant.id)
                   ? "bg-blue-50 border-blue-300"
                   : ""
               }">
                 <input 
                   type="checkbox" 
-                  value="${user.id}" 
-                  ${selectedIds.includes(user.id) ? "checked" : ""}
-                  onchange="toggleParticipant('${user.id}')"
+                  value="${participant.id}" 
+                  ${selectedIds.includes(participant.id) ? "checked" : ""}
+                  onchange="toggleParticipant('${participant.id}')"
                   class="w-5 h-5"
                 >
-                <span class="font-medium">${user.name}</span>
+                <span class="font-medium">${participant.name}</span>
               </label>
             `
               )
@@ -592,10 +592,10 @@
               <span class="text-gray-600">Participantes:</span>
               <div class="mt-2 flex flex-wrap gap-2">
                 ${store
-                  .getUsersByIds(newSharedExpenseData.participantIds)
+                  .getParticipantsByIds(newSharedExpenseData.participantIds)
                   .map(
-                    (user) => `
-                  <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${user.name}</span>
+                    (participant) => `
+                  <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${participant.name}</span>
                 `
                   )
                   .join("")}
@@ -627,10 +627,10 @@
         if (!sharedExpense)
           return '<div class="text-center p-8">No se encontró el gasto compartido</div>';
 
-        const users = store.getUsersByIds(sharedExpense.participantIds);
+        const participants = store.getParticipantsByIds(sharedExpense.participantIds);
         const expenses = store.getExpensesBySharedExpense(sharedExpense.id);
         const payments = store.getPaymentsBySharedExpense(sharedExpense.id);
-        const balances = calculateBalances(users, expenses, payments);
+        const balances = calculateBalances(participants, expenses, payments);
         const debts = calculateDebts(balances);
 
         const totalExpenses = expenses.reduce(
@@ -703,7 +703,7 @@
             <div class="space-y-2">
               ${balances
                 .map((b) => {
-                  const user = users.find((u) => u.id === b.userId);
+                  const participant = participants.find((u) => u.id === b.participantId);
                   const isPositive = b.balance > 0.01;
                   const isNegative = b.balance < -0.01;
                   return `
@@ -714,7 +714,7 @@
                       ? "bg-red-50"
                       : "bg-gray-50"
                   }">
-                    <span class="font-medium">${user?.name}</span>
+                    <span class="font-medium">${participant?.name}</span>
                     <span class="font-bold ${
                       isPositive
                         ? "text-green-600"
@@ -739,8 +739,8 @@
               <div class="space-y-2">
                 ${debts
                   .map((debt) => {
-                    const from = users.find((u) => u.id === debt.fromId);
-                    const to = users.find((u) => u.id === debt.toId);
+                    const from = participants.find((u) => u.id === debt.fromId);
+                    const to = participants.find((u) => u.id === debt.toId);
                     return `
                     <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded">
                       <span class="font-medium">${from?.name}</span>
@@ -764,7 +764,7 @@
 
       function renderExpenseForm(sharedExpense) {
         if (!sharedExpense) return "";
-        const users = store.getUsersByIds(sharedExpense.participantIds);
+        const participants = store.getParticipantsByIds(sharedExpense.participantIds);
 
         return `
         <div class="bg-white rounded-lg shadow p-6">
@@ -773,7 +773,7 @@
             <div>
               <label class="block text-sm font-medium mb-1">Quién pagó</label>
               <select name="payerId" required class="w-full p-2 border rounded">
-                ${users
+                ${participants
                   .map((u) => `<option value="${u.id}">${u.name}</option>`)
                   .join("")}
               </select>
@@ -797,7 +797,7 @@
 
       function renderPaymentForm(sharedExpense) {
         if (!sharedExpense) return "";
-        const users = store.getUsersByIds(sharedExpense.participantIds);
+        const participants = store.getParticipantsByIds(sharedExpense.participantIds);
 
         return `
         <div class="bg-white rounded-lg shadow p-6">
@@ -806,7 +806,7 @@
             <div>
               <label class="block text-sm font-medium mb-1">Quién paga</label>
               <select name="fromId" required class="w-full p-2 border rounded">
-                ${users
+                ${participants
                   .map((u) => `<option value="${u.id}">${u.name}</option>`)
                   .join("")}
               </select>
@@ -814,7 +814,7 @@
             <div>
               <label class="block text-sm font-medium mb-1">A quién paga</label>
               <select name="toId" required class="w-full p-2 border rounded">
-                ${users
+                ${participants
                   .map((u) => `<option value="${u.id}">${u.name}</option>`)
                   .join("")}
               </select>
@@ -837,7 +837,7 @@
 
         const expenses = store.getExpensesBySharedExpense(sharedExpense.id);
         const payments = store.getPaymentsBySharedExpense(sharedExpense.id);
-        const users = store.getUsersByIds(sharedExpense.participantIds);
+        const participants = store.getParticipantsByIds(sharedExpense.participantIds);
 
         return `
         <div class="space-y-4">
@@ -850,7 +850,7 @@
               <div class="space-y-2">
                 ${expenses
                   .map((exp) => {
-                    const payer = users.find((u) => u.id === exp.payerId);
+                    const payer = participants.find((u) => u.id === exp.payerId);
                     return `
                     <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
                       <div>
@@ -887,8 +887,8 @@
               <div class="space-y-2">
                 ${payments
                   .map((pay) => {
-                    const from = users.find((u) => u.id === pay.fromId);
-                    const to = users.find((u) => u.id === pay.toId);
+                    const from = participants.find((u) => u.id === pay.fromId);
+                    const to = participants.find((u) => u.id === pay.toId);
                     return `
                     <div class="flex justify-between items-center p-2 bg-green-50 rounded">
                       <div>
@@ -945,10 +945,10 @@
         render();
       };
 
-      window.toggleParticipant = (userId) => {
-        const index = newSharedExpenseData.participantIds.indexOf(userId);
+      window.toggleParticipant = (participantId) => {
+        const index = newSharedExpenseData.participantIds.indexOf(participantId);
         if (index === -1) {
-          newSharedExpenseData.participantIds.push(userId);
+          newSharedExpenseData.participantIds.push(participantId);
         } else {
           newSharedExpenseData.participantIds.splice(index, 1);
         }

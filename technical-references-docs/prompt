@@ -1,0 +1,19 @@
+Can you modularize the UI by creating reusable components like this:
+
+```
+export function setupCounter(element: HTMLButtonElement) {
+  let counter = 0
+  const setCounter = (count: number) => {
+    counter = count
+    element.innerHTML = `count is ${counter}`
+  }
+  element.addEventListener('click', () => setCounter(counter + 1))
+  setCounter(0)
+}
+```
+
+However, I am interested in managing the app's state solely from AppState and interacting with the database from AppStore, I am not sure where to add localStorage to preserve the app's state.
+
+Ensure that components always receive AppState and AppStore as parameters (or when necessary).
+
+I am attaching some files from the project that is halfway through refactoring, but they can give you an idea of the direction I want to go in, with the goal of setupCounter.
