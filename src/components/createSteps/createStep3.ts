@@ -110,12 +110,10 @@ export function setupCreateStep3(
   const buttonText = container.querySelector("#button-text");
   const buttonLoading = container.querySelector("#button-loading");
 
-  // Handler: Volver al paso anterior
   const handleBack = () => {
     state.goToPreviousStep(store);
   };
 
-  // Handler: Crear el shared expense
   const handleCreate = async () => {
     if (!createButton) return;
 
@@ -140,6 +138,7 @@ export function setupCreateStep3(
         type: data.type,
         status: "active",
         participantIds: data.participantIds,
+        totalAmount: 0,
         createdAt: new Date().toISOString(),
       };
 

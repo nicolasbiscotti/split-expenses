@@ -1,5 +1,3 @@
-// src/dashboard/debtList.ts
-
 import type { Debt, Participant } from "../../types";
 
 /**

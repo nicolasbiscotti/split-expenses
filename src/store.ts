@@ -130,6 +130,7 @@ export default class AppStore {
         type: sharedExpense.type,
         status: sharedExpense.status,
         participantIds: sharedExpense.participantIds,
+        totalAmount: sharedExpense.totalAmount,
         createdAt: sharedExpense.createdAt,
       });
       sharedExpense.id = sharedExpenseId;
@@ -143,7 +144,10 @@ export default class AppStore {
     }
   }
 
-  updateSharedExpense(id: string, updates: Partial<SharedExpense>): void {
+  async updateSharedExpense(
+    id: string,
+    updates: Partial<SharedExpense>
+  ): Promise<void> {
     const index = this.sharedExpenses.findIndex((se) => se.id === id);
     if (index !== -1) {
       this.sharedExpenses[index] = {
@@ -151,7 +155,7 @@ export default class AppStore {
         ...updates,
       };
       // TODO: Actualizar en Firebase también
-      // await sharedExpenseService.update(id, updates);
+      await sharedExpenseService.update(id, updates);
     }
   }
 

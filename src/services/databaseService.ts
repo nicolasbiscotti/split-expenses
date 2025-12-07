@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   Timestamp,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
@@ -79,15 +80,31 @@ async function getExpensesCollectionRef(collectionPath: string) {
 export const expenseService = {
   // Create new expense
   async createExpense(expense: Omit<Expense, "id">): Promise<string> {
-    const collectionRef = await getExpensesCollectionRef(
-      getExpensesCollectionPath(expense.sharedExpenseId)
-    );
+    const collectionPath = getExpensesCollectionPath(expense.sharedExpenseId);
+    const collectionRef = await getExpensesCollectionRef(collectionPath);
 
-    const docRef = await addDoc(collectionRef, {
-      ...expense,
-      createdAt: Timestamp.now(),
+    let docRef;
+
+    await runTransaction(db, async () => {
+      docRef = await addDoc(collectionRef, {
+        ...expense,
+        createdAt: Timestamp.now(),
+      });
+
+      const expenseList = await this.getExpenses(expense.sharedExpenseId);
+
+      let seTotalAmount = expenseList.reduce(
+        (total, expense) => total + expense.amount,
+        0
+      );
+
+      await sharedExpenseService.update(expense.sharedExpenseId, {
+        totalAmount: seTotalAmount,
+      });
     });
-    return docRef.id;
+
+    console.log("Transaction successfully committed! ==> ");
+    return docRef!.id;
   },
 
   // Get all expenses
@@ -96,9 +113,8 @@ export const expenseService = {
       return Promise.resolve([]);
     }
 
-    const collectionRef = await getExpensesCollectionRef(
-      getExpensesCollectionPath(sharedExpenseId)
-    );
+    const collectionPath = getExpensesCollectionPath(sharedExpenseId);
+    const collectionRef = await getExpensesCollectionRef(collectionPath);
 
     const querySnapshot = await getDocs(
       query(collectionRef, orderBy("date", "desc"))

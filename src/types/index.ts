@@ -53,6 +53,7 @@ export interface SharedExpense {
   type: SharedExpenseType;
   status: SharedExpenseStatus;
   participantIds: string[];
+  totalAmount: number;
   createdAt: string;
   closedAt?: string;
   periodName?: string; // Para recurrentes: "Enero 2025"

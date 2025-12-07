@@ -76,8 +76,7 @@ function renderList(sharedExpenses: any[], store: AppStore): string {
  * Render de una tarjeta individual
  */
 function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
-  const expenses = store.getExpensesBySharedExpense(sharedExpense.id);
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalAmount = sharedExpense.totalAmount;
   const participants = store.getParticipantsByIds(sharedExpense.participantIds);
 
   return `
