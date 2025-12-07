@@ -2,6 +2,8 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
+import { onAuthStateChange, firebaseUserToUser } from "./auth/authService";
+import { createOrUpdateUser } from "./services/userService";
 import type { Expense, Payment, ViewType } from "./types";
 
 // ==================== INIT ====================
@@ -102,4 +104,21 @@ document.addEventListener("submit", async (e) => {
 
 // ==================== START APP ====================
 state.subscribeRender(render);
-// NO llamar render() aquí, loadFromStorage() lo hará
+store.startApp();
+
+// Observer de autenticación
+onAuthStateChange(async (firebaseUser) => {
+  if (firebaseUser) {
+    // Usuario logueado
+    const user = firebaseUserToUser(firebaseUser);
+    await createOrUpdateUser(user);
+    store.setCurrentUser(user);
+
+    // Cargar datos
+    await store.loadFromStorage();
+  } else {
+    // Usuario no logueado
+    store.setCurrentUser(null);
+    state.setCurrentView("login", store);
+  }
+});
