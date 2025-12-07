@@ -1,3 +1,5 @@
+## 1
+
 Can you modularize the UI by creating reusable components like this:
 
 ```
@@ -17,3 +19,28 @@ However, I am interested in managing the app's state solely from AppState and in
 Ensure that components always receive AppState and AppStore as parameters (or when necessary).
 
 I am attaching some files from the project that is halfway through refactoring, but they can give you an idea of the direction I want to go in, with the goal of setupCounter.
+
+## 2. Autenticación y Roles en SplitExpenses
+
+Quiero implementar el **módulo de autenticación de usuarios** en la aplicación **SplitExpenses**, utilizando **Firebase Authentication con Google como proveedor de inicio de sesión**.
+
+### Reglas de acceso
+
+- Solo los usuarios autenticados podrán acceder a la pantalla de creación de _shared expenses_.
+- Un usuario autenticado puede:
+  - Crear nuevos _shared expenses_ (por defecto será **administrador y participante** al mismo tiempo, aunque debe quedar abierta la opción de ser solo administrador).
+  - Ver el listado de _shared expenses_ en los que es administrador y aquellos en los que participa.
+
+### Roles y permisos
+
+- **Participante:**
+  - Puede registrar sus propios gastos y pagos.
+  - Puede borrar únicamente sus propios gastos y pagos.
+- **Administrador:**
+  - Puede registrar y borrar gastos/pagos de otros participantes.
+  - Al registrar un gasto/pago, debe quedar registrado que el documento fue creado por el administrador (para que el participante no pueda borrarlo).
+  - Puede agregar participantes (ejemplo: mediante el email de Google del usuario).  
+    → Aquí me interesa sugerencias sobre la mejor forma de agregar participantes.
+  - Es el único que puede cerrar un _shared expense_, y solo si:
+    - Todos los balances de los participantes están en cero.
+    - Existe al menos un gasto asociado al _shared expense_.
