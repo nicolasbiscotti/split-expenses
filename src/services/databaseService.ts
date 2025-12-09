@@ -34,24 +34,24 @@ function getContactsRef(collectionPath: string) {
   return collection(db, collectionPath);
 }
 
-export const participantService = {
-  async createParticipant(
-    participant: Omit<Participant, "id">,
+export const contactService = {
+  async createContact(
+    contact: Omit<Participant, "id">,
     uid: string
   ): Promise<string> {
     const contactsPath = getContactsPath(uid);
     const contactsRef = getContactsRef(contactsPath);
 
     const docRef = await addDoc(contactsRef, {
-      ...participant,
+      ...contact,
       createdAt: Timestamp.now(),
     });
 
     return docRef.id;
   },
 
-  async createParticipantList(uid: string): Promise<string[]> {
-    const participantList = [
+  async createContactList(uid: string): Promise<string[]> {
+    const contactList = [
       { name: "Seba", email: "seba@example.com" },
       { name: "Nata", email: "nata@example.com" },
     ];
@@ -59,12 +59,11 @@ export const participantService = {
     const contactsPath = getContactsPath(uid);
     const contactsRef = getContactsRef(contactsPath);
 
-    const promises = participantList.map(
-      (participant: Omit<Participant, "id">) =>
-        addDoc(contactsRef, {
-          ...participant,
-          createdAt: Timestamp.now(),
-        })
+    const promises = contactList.map((contact: Omit<Participant, "id">) =>
+      addDoc(contactsRef, {
+        ...contact,
+        createdAt: Timestamp.now(),
+      })
     );
 
     const docRef = await Promise.all(promises);
@@ -72,7 +71,7 @@ export const participantService = {
     return docRef.map((ref) => ref.id);
   },
 
-  async getParticipants(uid: string): Promise<Participant[]> {
+  async getContacts(uid: string): Promise<Participant[]> {
     const contactsPath = getContactsPath(uid);
     const contactsRef = getContactsRef(contactsPath);
     const querySnapshot = await getDocs(query(contactsRef));

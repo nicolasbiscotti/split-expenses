@@ -3,8 +3,8 @@ import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
 import { onAuthStateChange, firebaseUserToUser } from "./auth/authService";
-import { createOrUpdateUser } from "./services/userService";
-import type { Expense, Payment, SharedExpense, ViewType } from "./types";
+import { userService } from "./services/userService";
+import type { Expense, Payment, ViewType } from "./types";
 
 // ==================== INIT ====================
 const state = new AppState();
@@ -126,7 +126,7 @@ onAuthStateChange(async (firebaseUser) => {
     console.log("Legged User ==> ", firebaseUser.email);
 
     const user = firebaseUserToUser(firebaseUser);
-    await createOrUpdateUser(user);
+    await userService.createOrUpdateUser(user);
     store.setCurrentUser(user);
 
     await store.loadFromStorage();

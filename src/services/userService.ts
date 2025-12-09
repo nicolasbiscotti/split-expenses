@@ -13,7 +13,7 @@ import { db } from "../firebase/config";
 import type { User } from "../types/auth";
 import { BASE_COLLECTION_PATH as USER_COLLECTION } from "./databaseService";
 
-export async function createOrUpdateUser(user: User): Promise<void> {
+async function createOrUpdateUser(user: User): Promise<void> {
   try {
     const userRef = doc(db, USER_COLLECTION, user.uid);
     const userSnap = await getDoc(userRef);
@@ -40,7 +40,7 @@ export async function createOrUpdateUser(user: User): Promise<void> {
 /**
  * Obtener usuario por UID
  */
-export async function getUserById(uid: string): Promise<User | null> {
+async function getUserById(uid: string): Promise<User | null> {
   try {
     const userRef = doc(db, USER_COLLECTION, uid);
     const userSnap = await getDoc(userRef);
@@ -59,7 +59,7 @@ export async function getUserById(uid: string): Promise<User | null> {
 /**
  * Obtener usuario por email
  */
-export async function getUserByEmail(email: string): Promise<User | null> {
+async function getUserByEmail(email: string): Promise<User | null> {
   try {
     const usersRef = collection(db, USER_COLLECTION);
     const q = query(usersRef, where("email", "==", email));
@@ -80,7 +80,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 /**
  * Obtener múltiples usuarios por UIDs
  */
-export async function getUsersByIds(uids: string[]): Promise<User[]> {
+async function getUsersByIds(uids: string[]): Promise<User[]> {
   try {
     if (uids.length === 0) return [];
 
@@ -109,7 +109,7 @@ export async function getUsersByIds(uids: string[]): Promise<User[]> {
 /**
  * Buscar usuarios por email (para autocompletado)
  */
-export async function searchUsersByEmail(emailPrefix: string): Promise<User[]> {
+async function searchUsersByEmail(emailPrefix: string): Promise<User[]> {
   try {
     const usersRef = collection(db, USER_COLLECTION);
     const q = query(
@@ -142,3 +142,11 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   }
   return chunks;
 }
+
+export const userService = {
+  createOrUpdateUser,
+  getUserById,
+  getUserByEmail,
+  getUsersByIds,
+  searchUsersByEmail,
+};

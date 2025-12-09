@@ -1,11 +1,11 @@
 import {
   expenseService,
-  participantService,
+  contactService,
   paymentService,
   sharedExpenseService,
 } from "./services/databaseService";
 import { signInWithGoogle, signOut } from "./auth/authService";
-import { createOrUpdateUser, getUsersByIds } from "./services/userService";
+import { userService } from "./services/userService";
 import {
   getPendingInvitationsByEmail,
   acceptPendingInvitation,
@@ -235,10 +235,10 @@ export default class AppStore {
       this.loadCachedCurrentExpenseId();
       await this.loadData();
       if (this.participants.length === 0) {
-        await participantService.createParticipantList(
+        await contactService.createContactList(
           this.getCurrentUser()?.uid || ""
         );
-        await participantService.createParticipant(
+        await contactService.createContact(
           {
             name: this.getCurrentUser()?.displayName || "",
             email: this.getCurrentUser()?.email || "",
@@ -260,7 +260,7 @@ export default class AppStore {
 
   private async loadData(): Promise<void> {
     const [participants, sharedExpenses] = await Promise.all([
-      participantService.getParticipants(this.getCurrentUser()?.uid || ""),
+      contactService.getContacts(this.getCurrentUser()?.uid || ""),
       sharedExpenseService.getAll(this.getCurrentUser()?.uid || ""),
     ]);
 
@@ -312,7 +312,7 @@ export default class AppStore {
   // Login
   async signInWithGoogle(): Promise<void> {
     const user = await signInWithGoogle();
-    await createOrUpdateUser(user);
+    await userService.createOrUpdateUser(user);
     this.currentUser = user;
 
     // Verificar invitaciones pendientes
@@ -342,6 +342,6 @@ export default class AppStore {
 
   // Obtener usuarios por UIDs (actualizado)
   async getUsersByIds(uids: string[]): Promise<User[]> {
-    return await getUsersByIds(uids);
+    return await userService.getUsersByIds(uids);
   }
 }
