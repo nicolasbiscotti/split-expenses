@@ -1,6 +1,10 @@
 import type AppStore from "./store";
 import type AppState from "./state/AppState";
 
+import renderLoginScreen, {
+  setupLoginScreen,
+} from "./components/auth/LoginScreen";
+
 // Dashboard
 import renderDashboard, {
   setupDashboard,
@@ -78,6 +82,9 @@ function renderViewContent(
   store: AppStore
 ): string {
   switch (view) {
+    case "login":
+      return renderLoginScreen();
+
     case "shared-expense-list":
       return renderSharedExpenseList(state, store);
 
@@ -120,6 +127,11 @@ function setupViewInteractions(
   if (!app) return;
 
   switch (view) {
+    case "login": {
+      setupLoginScreen(app, state, store);
+      break;
+    }
+
     case "shared-expense-list": {
       const container = app.querySelector<HTMLElement>(".max-w-lg");
       if (container) {

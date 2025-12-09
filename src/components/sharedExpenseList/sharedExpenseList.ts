@@ -1,5 +1,6 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import type { SharedExpense } from "../../types";
 
 /**
  * Render: Lista de gastos compartidos o estado vacío
@@ -75,9 +76,12 @@ function renderList(sharedExpenses: any[], store: AppStore): string {
 /**
  * Render de una tarjeta individual
  */
-function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
+function renderSharedExpenseCard(
+  sharedExpense: SharedExpense,
+  _store: AppStore
+): string {
   const totalAmount = sharedExpense.totalAmount;
-  const participants = store.getParticipantsByIds(sharedExpense.participantIds);
+  const participants = sharedExpense.participants;
 
   return `
     <div 

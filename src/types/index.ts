@@ -7,6 +7,7 @@ export * from "./auth";
 export interface Participant {
   id: string;
   name: string;
+  email: string;
 }
 
 export interface Expense {

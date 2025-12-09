@@ -4,7 +4,7 @@ import render from "./render";
 import AppState from "./state/AppState";
 import { onAuthStateChange, firebaseUserToUser } from "./auth/authService";
 import { createOrUpdateUser } from "./services/userService";
-import type { Expense, Payment, ViewType } from "./types";
+import type { Expense, Payment, SharedExpense, ViewType } from "./types";
 
 // ==================== INIT ====================
 const state = new AppState();
@@ -45,21 +45,29 @@ document.addEventListener("submit", async (e) => {
   // Expense Form
   if (form.id === "expense-form") {
     const formData = new FormData(form);
+    const currentUser = store.getCurrentUser();
     const currentExpenseId = store.getCurrentSharedExpenseId();
+    const sharedExpense = store.getSharedExpense(currentExpenseId!);
 
-    if (!currentExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
+    if (!currentUser || !sharedExpense) {
+      alert("Error: Usuario o gasto compartido no encontrado");
       return;
     }
+
+    const isAdmin = sharedExpense.administrators.includes(currentUser.uid);
 
     try {
       await store.addExpense(
         {
-          sharedExpenseId: currentExpenseId,
+          sharedExpenseId: currentExpenseId!,
           payerId: formData.get("payerId") as string,
           amount: parseFloat(formData.get("amount") as string),
           description: formData.get("description") as string,
           date: new Date().toISOString(),
+
+          // NUEVO: Auditoría
+          createdBy: currentUser.uid,
+          createdByAdmin: isAdmin,
         } as Expense,
         "dashboard"
       );
@@ -73,10 +81,12 @@ document.addEventListener("submit", async (e) => {
     const formData = new FormData(form);
     const fromId = formData.get("fromId") as string;
     const toId = formData.get("toId") as string;
+    const currentUser = store.getCurrentUser();
     const currentExpenseId = store.getCurrentSharedExpenseId();
+    const sharedExpense = store.getSharedExpense(currentExpenseId!);
 
-    if (!currentExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
+    if (!currentUser || !sharedExpense) {
+      alert("Error: Usuario o gasto compartido no encontrado");
       return;
     }
 
@@ -84,6 +94,8 @@ document.addEventListener("submit", async (e) => {
       alert("No puedes registrar un pago a la misma persona");
       return;
     }
+
+    const isAdmin = sharedExpense.administrators.includes(currentUser.uid);
 
     try {
       await store.addPayment(
@@ -93,6 +105,8 @@ document.addEventListener("submit", async (e) => {
           toId,
           amount: parseFloat(formData.get("amount") as string),
           date: new Date().toISOString(),
+          createdBy: currentUser.uid,
+          createdByAdmin: isAdmin,
         } as Payment,
         "dashboard"
       );
@@ -104,20 +118,21 @@ document.addEventListener("submit", async (e) => {
 
 // ==================== START APP ====================
 state.subscribeRender(render);
-store.startApp();
+// store.startApp();
 
 // Observer de autenticación
 onAuthStateChange(async (firebaseUser) => {
   if (firebaseUser) {
-    // Usuario logueado
+    console.log("Legged User ==> ", firebaseUser.email);
+
     const user = firebaseUserToUser(firebaseUser);
     await createOrUpdateUser(user);
     store.setCurrentUser(user);
 
-    // Cargar datos
     await store.loadFromStorage();
   } else {
-    // Usuario no logueado
+    console.log("No legged User ==> ");
+
     store.setCurrentUser(null);
     state.setCurrentView("login", store);
   }

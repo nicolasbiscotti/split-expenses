@@ -123,6 +123,13 @@ export function setupCreateStep3(
     buttonLoading?.classList.remove("hidden");
 
     try {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser) {
+        alert("Debes estar logueado para crear un gasto compartido");
+        state.setCurrentView("login", store);
+        return;
+      }
+
       const data = state.getNewSharedExpenseData();
 
       // Validación final
@@ -130,20 +137,21 @@ export function setupCreateStep3(
         throw new Error("Datos inválidos");
       }
 
-      // Crear el objeto SharedExpense
       const newSharedExpense: SharedExpense = {
-        id: "", // Firebase generará el ID
+        id: "",
         name: data.name,
         description: data.description,
         type: data.type,
         status: "active",
-        participantIds: data.participantIds,
         totalAmount: 0,
         createdAt: new Date().toISOString(),
+
+        // NUEVO: Auth fields
+        createdBy: currentUser.uid,
+        administrators: [currentUser.uid],
+        participants: [currentUser.uid], // Se incluye a sí mismo
       };
 
-      // Guardar en la base de datos
-      // NOTA: Debes implementar createSharedExpense en AppStore
       await store.createSharedExpense(newSharedExpense);
 
       // Limpiar datos temporales

@@ -2,8 +2,14 @@ import {
   expenseService,
   participantService,
   paymentService,
-  sharedExpenseService, // Necesitas crear este servicio
+  sharedExpenseService,
 } from "./services/databaseService";
+import { signInWithGoogle, signOut } from "./auth/authService";
+import { createOrUpdateUser, getUsersByIds } from "./services/userService";
+import {
+  getPendingInvitationsByEmail,
+  acceptPendingInvitation,
+} from "./services/invitationService";
 import type AppState from "./state/AppState";
 import type {
   Participant,
@@ -11,6 +17,7 @@ import type {
   Payment,
   SharedExpense,
   ViewType,
+  User,
 } from "./types";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";
@@ -25,6 +32,9 @@ export default class AppStore {
 
   constructor(state: AppState) {
     this.state = state;
+  }
+
+  startApp() {
     this.loadFromStorage();
   }
 
@@ -52,7 +62,10 @@ export default class AppStore {
 
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
     try {
-      const expenseId = await expenseService.createExpense(expense);
+      const expenseId = await expenseService.createExpense(
+        expense,
+        this.getCurrentUser()?.uid || ""
+      );
       expense.id = expenseId;
       this.expenses.push(expense);
       console.log("Expense created with id:", expenseId);
@@ -66,7 +79,11 @@ export default class AppStore {
 
   async deleteExpense(id: string, currentView: ViewType): Promise<void> {
     try {
-      await expenseService.deleteExpense(id, this.currentSharedExpenseId || "");
+      await expenseService.deleteExpense(
+        id,
+        this.currentSharedExpenseId || "",
+        this.getCurrentUser()?.uid || ""
+      );
       this.expenses = this.expenses.filter((e) => e.id !== id);
       console.log("Expense deleted:", id);
     } catch (error) {
@@ -88,7 +105,10 @@ export default class AppStore {
 
   async addPayment(payment: Payment, currentView: ViewType): Promise<void> {
     try {
-      const paymentId = await paymentService.createPayment(payment);
+      const paymentId = await paymentService.createPayment(
+        payment,
+        this.getCurrentUser()?.uid || ""
+      );
       payment.id = paymentId;
       this.payments.push(payment);
       console.log("Payment created with id:", paymentId);
@@ -102,7 +122,11 @@ export default class AppStore {
 
   async deletePayment(id: string, currentView: ViewType): Promise<void> {
     try {
-      await paymentService.deletePayment(id, this.currentSharedExpenseId || "");
+      await paymentService.deletePayment(
+        id,
+        this.currentSharedExpenseId || "",
+        this.getCurrentUser()?.uid || ""
+      );
       this.payments = this.payments.filter((p) => p.id !== id);
       console.log("Payment deleted:", id);
     } catch (error) {
@@ -124,15 +148,20 @@ export default class AppStore {
 
   async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
     try {
-      const sharedExpenseId = await sharedExpenseService.create({
-        name: sharedExpense.name,
-        description: sharedExpense.description,
-        type: sharedExpense.type,
-        status: sharedExpense.status,
-        participantIds: sharedExpense.participantIds,
-        totalAmount: sharedExpense.totalAmount,
-        createdAt: sharedExpense.createdAt,
-      });
+      const sharedExpenseId = await sharedExpenseService.create(
+        {
+          name: sharedExpense.name,
+          description: sharedExpense.description,
+          type: sharedExpense.type,
+          status: sharedExpense.status,
+          totalAmount: sharedExpense.totalAmount,
+          createdAt: sharedExpense.createdAt,
+          createdBy: this.getCurrentUser()!.uid,
+          administrators: [],
+          participants: sharedExpense.participants,
+        },
+        this.getCurrentUser()?.uid || ""
+      );
       sharedExpense.id = sharedExpenseId;
       this.sharedExpenses.push(sharedExpense);
       this.setCurrentSharedExpenseId(sharedExpenseId);
@@ -155,7 +184,11 @@ export default class AppStore {
         ...updates,
       };
       // TODO: Actualizar en Firebase también
-      await sharedExpenseService.update(id, updates);
+      await sharedExpenseService.update(
+        id,
+        updates,
+        this.getCurrentUser()?.uid || ""
+      );
     }
   }
 
@@ -202,7 +235,9 @@ export default class AppStore {
       this.loadCachedCurrentExpenseId();
       await this.loadData();
       if (this.participants.length === 0) {
-        await participantService.createParticipantList();
+        await participantService.createParticipantList(
+          this.getCurrentUser()?.uid || ""
+        );
         await this.loadData();
       }
     } catch (error) {
@@ -217,26 +252,70 @@ export default class AppStore {
   }
 
   private async loadData(): Promise<void> {
-    const [expenses, payments, participants, sharedExpenses] =
-      await Promise.all([
-        expenseService.getExpenses(this.currentSharedExpenseId || ""),
-        paymentService.getPayments(this.currentSharedExpenseId || ""),
-        participantService.getParticipants(),
-        sharedExpenseService.getAll(), // Necesitas implementar este servicio
-      ]);
+    const [participants, sharedExpenses] = await Promise.all([
+      participantService.getParticipants(this.getCurrentUser()?.uid || ""),
+      sharedExpenseService.getAll(this.getCurrentUser()?.uid || ""),
+    ]);
 
-    this.expenses = expenses;
-    this.payments = payments;
     this.participants = participants;
     this.sharedExpenses = sharedExpenses;
 
     console.log("Data loaded:", {
-      expenses: expenses.length,
-      payments: payments.length,
       participants: participants.length,
       sharedExpenses: sharedExpenses.length,
     });
 
     console.log("Shared Expenses loaded:", sharedExpenses);
+  }
+
+  private currentUser: User | null = null;
+
+  // Getter para usuario actual
+  getCurrentUser(): User | null {
+    return this.currentUser;
+  }
+
+  async setCurrentUser(user: User | null): Promise<void> {
+    this.currentUser = user;
+    if (user) {
+      // Procesar invitaciones pendientes
+      await this.processPendingInvitations(user.email);
+    }
+  }
+
+  // Login
+  async signInWithGoogle(): Promise<void> {
+    const user = await signInWithGoogle();
+    await createOrUpdateUser(user);
+    this.currentUser = user;
+
+    // Verificar invitaciones pendientes
+    await this.processPendingInvitations(user.email);
+  }
+
+  // Logout
+  async signOut(): Promise<void> {
+    await signOut();
+    this.currentUser = null;
+    this.state.setCurrentView("login", this);
+  }
+
+  // Procesar invitaciones pendientes
+  private async processPendingInvitations(email: string): Promise<void> {
+    const invitations = await getPendingInvitationsByEmail(email);
+
+    for (const invitation of invitations) {
+      try {
+        await acceptPendingInvitation(invitation.id, this.currentUser!.uid);
+        console.log("Auto-accepted invitation:", invitation.sharedExpenseName);
+      } catch (error) {
+        console.error("Error auto-accepting invitation:", error);
+      }
+    }
+  }
+
+  // Obtener usuarios por UIDs (actualizado)
+  async getUsersByIds(uids: string[]): Promise<User[]> {
+    return await getUsersByIds(uids);
   }
 }

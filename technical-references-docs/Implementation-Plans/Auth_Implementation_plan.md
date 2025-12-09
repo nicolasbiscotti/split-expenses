@@ -14,7 +14,7 @@
 
 ## 📝 Archivos Pendientes de Crear
 
-### 1. Actualizar AppStore con Autenticación
+### 1. ✅ Actualizar AppStore con Autenticación
 
 ```typescript
 // src/store.ts - Agregar estas propiedades y métodos
@@ -79,7 +79,7 @@ export default class AppStore {
 }
 ```
 
-### 2. Actualizar main.ts con Auth Observer
+### 2. ✅ Actualizar main.ts con Auth Observer
 
 ```typescript
 // src/main.ts
@@ -110,7 +110,7 @@ onAuthStateChange(async (firebaseUser) => {
 });
 ```
 
-### 3. Actualizar render.ts
+### 3. ✅ Actualizar render.ts
 
 ```typescript
 // src/render.ts
@@ -148,7 +148,7 @@ function setupViewInteractions(
 }
 ```
 
-### 4. Actualizar createSharedExpense
+### 4. ✅ Actualizar createSharedExpense
 
 ```typescript
 // En el componente createStep3.ts
@@ -181,7 +181,7 @@ const handleCreate = async () => {
 };
 ```
 
-### 5. Actualizar addExpense y addPayment
+### 5. ✅  Actualizar addExpense y addPayment
 
 ```typescript
 // En main.ts, event handler de expense-form
