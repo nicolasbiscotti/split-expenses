@@ -15,9 +15,9 @@ import { db } from "../firebase/config";
 
 import type { Expense, Payment, Participant, SharedExpense } from "../types";
 
-const USERS_COLLECTION_NAME = "users";
+export const USERS_COLLECTION_NAME = "users";
 
-const BASE_COLLECTION_PATH = `environments/${
+export const BASE_COLLECTION_PATH = `environments/${
   import.meta.env.VITE_FIRESTORE_DATA_ID
 }/${USERS_COLLECTION_NAME}`;
 

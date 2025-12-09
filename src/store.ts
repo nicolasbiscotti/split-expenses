@@ -157,7 +157,7 @@ export default class AppStore {
           totalAmount: sharedExpense.totalAmount,
           createdAt: sharedExpense.createdAt,
           createdBy: this.getCurrentUser()!.uid,
-          administrators: [],
+          administrators: sharedExpense.administrators,
           participants: sharedExpense.participants,
         },
         this.getCurrentUser()?.uid || ""
@@ -209,7 +209,7 @@ export default class AppStore {
     this.currentSharedExpenseId = id;
 
     if (id) {
-      await this.loadData();
+      await this.loadCurredSharedExpenseDetails();
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
@@ -238,6 +238,13 @@ export default class AppStore {
         await participantService.createParticipantList(
           this.getCurrentUser()?.uid || ""
         );
+        await participantService.createParticipant(
+          {
+            name: this.getCurrentUser()?.displayName || "",
+            email: this.getCurrentUser()?.email || "",
+          },
+          this.getCurrentUser()?.uid || ""
+        );
         await this.loadData();
       }
     } catch (error) {
@@ -261,11 +268,30 @@ export default class AppStore {
     this.sharedExpenses = sharedExpenses;
 
     console.log("Data loaded:", {
-      participants: participants.length,
-      sharedExpenses: sharedExpenses.length,
+      contacts: participants,
+      sharedExpenses: sharedExpenses,
     });
+  }
 
-    console.log("Shared Expenses loaded:", sharedExpenses);
+  private async loadCurredSharedExpenseDetails() {
+    const [expenses, payments] = await Promise.all([
+      expenseService.getExpenses(
+        this.currentSharedExpenseId || "",
+        this.getCurrentUser()?.uid || ""
+      ),
+      paymentService.getPayments(
+        this.currentSharedExpenseId || "",
+        this.getCurrentUser()?.uid || ""
+      ),
+    ]);
+
+    this.expenses = expenses;
+    this.payments = payments;
+
+    console.log("Shared Expense details loaded:", {
+      expenses: expenses,
+      payments: payments,
+    });
   }
 
   private currentUser: User | null = null;
