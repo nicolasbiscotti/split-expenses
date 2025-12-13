@@ -13,7 +13,8 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-import type { Expense, Payment, Participant, SharedExpense } from "../types";
+import type { Expense, Participant, Payment, SharedExpense } from "../types";
+import { participantService } from "./participantServices";
 
 export const USERS_COLLECTION_NAME = "users";
 
@@ -21,72 +22,11 @@ export const BASE_COLLECTION_PATH = `environments/${
   import.meta.env.VITE_FIRESTORE_DATA_ID
 }/${USERS_COLLECTION_NAME}`;
 
-const CONTACTS_COLLECTION_NAME = "contacts";
 const EXPENSES_COLLECTION_NAME = "expenses";
 const PAYMENTS_COLLECTION_NAME = "payments";
-const SHARED_EXPENSES_COLLECTION_NAME = "sharedExpenses";
-
-// Contacts Operations
-function getContactsPath(uid: string) {
-  return `${BASE_COLLECTION_PATH}/${uid}/${CONTACTS_COLLECTION_NAME}`;
-}
-function getContactsRef(collectionPath: string) {
-  return collection(db, collectionPath);
-}
-
-export const contactService = {
-  async createContact(
-    contact: Omit<Participant, "id">,
-    uid: string
-  ): Promise<string> {
-    const contactsPath = getContactsPath(uid);
-    const contactsRef = getContactsRef(contactsPath);
-
-    const docRef = await addDoc(contactsRef, {
-      ...contact,
-      createdAt: Timestamp.now(),
-    });
-
-    return docRef.id;
-  },
-
-  async createContactList(uid: string): Promise<string[]> {
-    const contactList = [
-      { name: "Seba", email: "seba@example.com" },
-      { name: "Nata", email: "nata@example.com" },
-    ];
-
-    const contactsPath = getContactsPath(uid);
-    const contactsRef = getContactsRef(contactsPath);
-
-    const promises = contactList.map((contact: Omit<Participant, "id">) =>
-      addDoc(contactsRef, {
-        ...contact,
-        createdAt: Timestamp.now(),
-      })
-    );
-
-    const docRef = await Promise.all(promises);
-
-    return docRef.map((ref) => ref.id);
-  },
-
-  async getContacts(uid: string): Promise<Participant[]> {
-    const contactsPath = getContactsPath(uid);
-    const contactsRef = getContactsRef(contactsPath);
-    const querySnapshot = await getDocs(query(contactsRef));
-
-    return querySnapshot.docs.map(
-      (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        } as Participant)
-    );
-  },
-};
-
-// --------------------------------------------------
+export const PARTICIPANTS_COLLECTION_NAME = "participants";
+export const SHARED_EXPENSES_COLLECTION_NAME = "sharedExpenses";
+export const CONTACTS_COLLECTION_NAME = "contacts";
 
 // Expense Operations
 
@@ -311,11 +251,23 @@ function getSharedExpensesRef(collectionPath: string) {
 export const sharedExpenseService = {
   create: async (
     data: Omit<SharedExpense, "id">,
+    participants: Omit<Participant, "id">[],
     uid: string
   ): Promise<string> => {
     const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
-    const docRef = await addDoc(collectionRef, data);
-    return docRef.id;
+
+    let docRef;
+    await runTransaction(db, async () => {
+      docRef = await addDoc(collectionRef, data);
+
+      await participantService.createParticipantList(
+        docRef.id,
+        participants,
+        uid
+      );
+    });
+
+    return docRef!.id;
   },
 
   getAll: async (uid: string): Promise<SharedExpense[]> => {

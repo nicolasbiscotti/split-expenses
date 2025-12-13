@@ -1,6 +1,5 @@
 import {
   expenseService,
-  contactService,
   paymentService,
   sharedExpenseService,
 } from "./services/databaseService";
@@ -18,7 +17,11 @@ import type {
   SharedExpense,
   ViewType,
   User,
+  Contact,
 } from "./types";
+import { contactService } from "./services/contactServices";
+import type { NewSharedExpenseData } from "./state/AppState";
+import { participantService } from "./services/participantServices";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";
 
@@ -28,6 +31,7 @@ export default class AppStore {
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
+  private contacts: Contact[] = [];
   private state: AppState;
 
   constructor(state: AppState) {
@@ -146,25 +150,45 @@ export default class AppStore {
     return this.sharedExpenses.find((se) => se.id === id);
   }
 
-  async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
+  async createSharedExpense(
+    sharedExpenseData: NewSharedExpenseData
+  ): Promise<string> {
+    const participantsToCreate: Omit<Participant, "id">[] =
+      sharedExpenseData.participants.map((p) => ({
+        name: p.name,
+        isAdmin: p.isAdmin,
+        contactId: p.contactId,
+        appUserId: p.appUserId,
+      }));
+
+    const currentSharedExpenseData: Omit<SharedExpense, "id"> = {
+      name: sharedExpenseData.name,
+      description: sharedExpenseData.description,
+      type: sharedExpenseData.type,
+      status: "active",
+      totalAmount: 0,
+
+      createdAt: new Date().toISOString(),
+      createdBy: this.getCurrentUser()!.uid,
+      administrators: [this.getCurrentUser()!.uid],
+      participants: [...participantsToCreate.map((p) => p.appUserId || "")],
+    };
+
+    const currentSharedExpense: SharedExpense = {
+      id: "",
+      ...currentSharedExpenseData,
+    };
+
     try {
       const sharedExpenseId = await sharedExpenseService.create(
-        {
-          name: sharedExpense.name,
-          description: sharedExpense.description,
-          type: sharedExpense.type,
-          status: sharedExpense.status,
-          totalAmount: sharedExpense.totalAmount,
-          createdAt: sharedExpense.createdAt,
-          createdBy: this.getCurrentUser()!.uid,
-          administrators: sharedExpense.administrators,
-          participants: sharedExpense.participants,
-        },
+        { ...currentSharedExpenseData },
+        participantsToCreate,
         this.getCurrentUser()?.uid || ""
       );
-      sharedExpense.id = sharedExpenseId;
-      this.sharedExpenses.push(sharedExpense);
-      this.setCurrentSharedExpenseId(sharedExpenseId);
+
+      currentSharedExpense.id = sharedExpenseId;
+      this.sharedExpenses.push(currentSharedExpense);
+
       console.log("Shared expense created with id:", sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {
@@ -229,12 +253,21 @@ export default class AppStore {
     }
   }
 
+  // ==================== CONTACTS ============================
+  getContacts(): Contact[] {
+    return [...this.contacts];
+  }
+
+  getContactsToBeParticipants(ids: string[]): Contact[] {
+    return this.contacts.filter((c) => ids.includes(c.id));
+  }
+
   // ==================== LOAD FROM STORAGE ====================
   async loadFromStorage(): Promise<void> {
     try {
       this.loadCachedCurrentExpenseId();
       await this.loadData();
-      if (this.participants.length === 0) {
+      if (this.contacts.length === 0) {
         await contactService.createContactList(
           this.getCurrentUser()?.uid || ""
         );
@@ -242,6 +275,7 @@ export default class AppStore {
           {
             name: this.getCurrentUser()?.displayName || "",
             email: this.getCurrentUser()?.email || "",
+            appUserId: this.getCurrentUser()?.uid || null,
           },
           this.getCurrentUser()?.uid || ""
         );
@@ -259,22 +293,26 @@ export default class AppStore {
   }
 
   private async loadData(): Promise<void> {
-    const [participants, sharedExpenses] = await Promise.all([
+    const [contacts, sharedExpenses] = await Promise.all([
       contactService.getContacts(this.getCurrentUser()?.uid || ""),
       sharedExpenseService.getAll(this.getCurrentUser()?.uid || ""),
     ]);
 
-    this.participants = participants;
+    this.contacts = contacts;
     this.sharedExpenses = sharedExpenses;
 
     console.log("Data loaded:", {
-      contacts: participants,
+      contacts: contacts,
       sharedExpenses: sharedExpenses,
     });
   }
 
   private async loadCurredSharedExpenseDetails() {
-    const [expenses, payments] = await Promise.all([
+    const [participants, expenses, payments] = await Promise.all([
+      participantService.getParticipants(
+        this.currentSharedExpenseId || "",
+        this.getCurrentUser()?.uid || ""
+      ),
       expenseService.getExpenses(
         this.currentSharedExpenseId || "",
         this.getCurrentUser()?.uid || ""
@@ -287,10 +325,12 @@ export default class AppStore {
 
     this.expenses = expenses;
     this.payments = payments;
+    this.participants = participants;
 
     console.log("Shared Expense details loaded:", {
       expenses: expenses,
       payments: payments,
+      participants: participants,
     });
   }
 

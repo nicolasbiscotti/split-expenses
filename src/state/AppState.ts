@@ -1,4 +1,4 @@
-import type { ViewType, StepValue } from "../types";
+import type { ViewType, StepValue, Participant } from "../types";
 import type AppStore from "../store";
 
 export interface NewSharedExpenseData {
@@ -6,6 +6,7 @@ export interface NewSharedExpenseData {
   description: string;
   type: "unique" | "recurring";
   participantIds: string[];
+  participants: Participant[];
 }
 
 type RenderFunction = (state: AppState, store: AppStore) => void;
@@ -18,6 +19,7 @@ export default class AppState {
     description: "",
     type: "unique",
     participantIds: [],
+    participants: [],
   };
   private renderFunctions: RenderFunction[] = [];
 
@@ -81,13 +83,36 @@ export default class AppState {
     this.newSharedExpenseData.type = type;
   }
 
-  toggleParticipantInNew(userId: string, store: AppStore): void {
-    const index = this.newSharedExpenseData.participantIds.indexOf(userId);
+  toggleParticipantInNew(contactId: string, store: AppStore): void {
+    const index = this.newSharedExpenseData.participantIds.indexOf(contactId);
     if (index === -1) {
-      this.newSharedExpenseData.participantIds.push(userId);
+      this.newSharedExpenseData.participantIds.push(contactId);
+      this.newSharedExpenseData.participants = store
+        .getContacts()
+        .filter((c) => this.newSharedExpenseData.participantIds.includes(c.id))
+        .map((c) => ({
+          id: "",
+          name: c.name,
+          isAdmin: store.getCurrentUser()?.uid === c.appUserId,
+          contactId: c.id,
+          appUserId: c.appUserId,
+        }));
     } else {
       this.newSharedExpenseData.participantIds.splice(index, 1);
+      this.newSharedExpenseData.participants = store
+        .getContacts()
+        .filter((c) => this.newSharedExpenseData.participantIds.includes(c.id))
+        .map((c) => ({
+          id: "",
+          name: c.name,
+          isAdmin: store.getCurrentUser()?.uid === c.appUserId,
+          contactId: c.id,
+          appUserId: c.appUserId,
+        }));
     }
+
+    console.log("new Shared Expense Data ==> ", this.newSharedExpenseData);
+
     this.notify(store); // Notificamos porque cambia la UI
   }
 
@@ -97,6 +122,7 @@ export default class AppState {
       description: "",
       type: "unique",
       participantIds: [],
+      participants: [],
     };
     this.createStep = 1;
   }

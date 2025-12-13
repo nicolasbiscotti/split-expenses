@@ -1,13 +1,11 @@
 export * from "./auth";
 
-/**
- * Participant - DEPRECATED, usar User directamente
- * Mantener por compatibilidad temporal
- */
 export interface Participant {
   id: string;
   name: string;
-  email: string;
+  isAdmin: Boolean;
+  contactId: string | null;
+  appUserId?: string | null;
 }
 
 export interface Expense {
@@ -56,7 +54,6 @@ export interface SharedExpense {
   description: string;
   type: SharedExpenseType;
   status: SharedExpenseStatus;
-
   totalAmount: number;
   createdAt: string;
   closedAt?: string;
@@ -66,6 +63,13 @@ export interface SharedExpense {
   createdBy: string; // User UID del creador
   administrators: string[]; // Array de User UIDs
   participants: string[]; // Array de User UIDs (incluye admins)
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  appUserId: string | null;
 }
 
 export interface Period {

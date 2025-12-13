@@ -1,3 +1,4 @@
+import type { NewSharedExpenseData } from "../../state/AppState";
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpense } from "../../types";
@@ -10,7 +11,7 @@ export default function renderCreateStep3(
   store: AppStore
 ): string {
   const data = state.getNewSharedExpenseData();
-  const participants = store.getParticipantsByIds(data.participantIds);
+  const participants = store.getContactsToBeParticipants(data.participantIds);
 
   return `
     <div class="mb-6">
@@ -137,22 +138,8 @@ export function setupCreateStep3(
         throw new Error("Datos inválidos");
       }
 
-      const newSharedExpense: SharedExpense = {
-        id: "",
-        name: data.name,
-        description: data.description,
-        type: data.type,
-        status: "active",
-        totalAmount: 0,
-        createdAt: new Date().toISOString(),
-
-        // NUEVO: Auth fields
-        createdBy: currentUser.uid,
-        administrators: [currentUser.uid],
-        participants: [currentUser.uid], // Se incluye a sí mismo
-      };
-
-      await store.createSharedExpense(newSharedExpense);
+      const sharedExpenseId = await store.createSharedExpense(data);
+      await store.setCurrentSharedExpenseId(sharedExpenseId);
 
       // Limpiar datos temporales
       state.resetNewSharedExpenseData();

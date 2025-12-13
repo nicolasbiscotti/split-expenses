@@ -8,7 +8,7 @@ export default function renderCreateStep2(
   state: AppState,
   store: AppStore
 ): string {
-  const allParticipants = store.getParticipants();
+  const allUserContact = store.getContacts();
   const selectedIds = state.getNewSharedExpenseData().participantIds;
 
   return `
@@ -34,7 +34,7 @@ export default function renderCreateStep2(
       </div>
 
       <div id="participants-list" class="space-y-2">
-        ${allParticipants
+        ${allUserContact
           .map(
             (participant) => `
           <label class="flex items-center gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 ${
