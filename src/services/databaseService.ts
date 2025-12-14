@@ -145,7 +145,24 @@ export const expenseService = {
     }
 
     const docRef = doc(db, getExpensesPath(currentSharedExpenseId, uid), id);
-    await deleteDoc(docRef);
+
+    return await runTransaction(db, async () => {
+      await deleteDoc(docRef);
+      const expenseList = await this.getExpenses(currentSharedExpenseId, uid);
+
+      let seTotalAmount = expenseList.reduce(
+        (total, expense) => total + expense.amount,
+        0
+      );
+
+      await sharedExpenseService.update(
+        currentSharedExpenseId,
+        {
+          totalAmount: seTotalAmount,
+        },
+        uid
+      );
+    });
   },
 };
 
