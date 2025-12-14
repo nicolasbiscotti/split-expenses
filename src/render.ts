@@ -1,9 +1,18 @@
 import type AppStore from "./store";
 import type AppState from "./state/AppState";
 
+// Navigation
+import renderMainTopNavBar, {
+  setupMainTopNavBar,
+} from "./components/menus/mainTopNavBar";
+
+// Auth
 import renderLoginScreen, {
   setupLoginScreen,
 } from "./components/auth/LoginScreen";
+import renderUserProfile, {
+  setupUserProfile,
+} from "./components/auth/UserProfile";
 
 // Dashboard
 import renderDashboard, {
@@ -58,14 +67,22 @@ export default function render(state: AppState, store: AppStore): void {
 
   // Determinar si necesita padding bottom para la navegación
   const needsBottomPadding =
-    currentView !== "shared-expense-list" && !currentView.startsWith("create");
+    currentView !== "shared-expense-list" &&
+    currentView !== "login" &&
+    currentView !== "user-profile" &&
+    !currentView.startsWith("create");
 
   // Renderizar el HTML
   app.innerHTML = `
-    <div class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
+    <!-- Top Navigation Bar -->
+    ${renderMainTopNavBar(state, store)}
+
+    <!-- Main Content -->
+    <div id="app-main-container" class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
       ${renderViewContent(currentView, state, store)}
     </div>
 
+    <!-- Bottom Navigation Bar (solo en vistas específicas) -->
     ${needsBottomPadding ? bottomNavBar(state, currentSharedExpense) : ""}
   `;
 
@@ -84,6 +101,9 @@ function renderViewContent(
   switch (view) {
     case "login":
       return renderLoginScreen();
+
+    case "user-profile":
+      return renderUserProfile(state, store);
 
     case "shared-expense-list":
       return renderSharedExpenseList(state, store);
@@ -126,14 +146,28 @@ function setupViewInteractions(
   const app = document.getElementById("app");
   if (!app) return;
 
+  // Setup del Top NavBar (siempre, excepto en login)
+  if (view !== "login") {
+    setupMainTopNavBar(app, state, store);
+  }
+
+  // Setup específico de cada vista
   switch (view) {
     case "login": {
       setupLoginScreen(app, state, store);
       break;
     }
 
+    case "user-profile": {
+      const container = app.querySelector<HTMLElement>("#app-main-container");
+      if (container) {
+        setupUserProfile(container, state, store);
+      }
+      break;
+    }
+
     case "shared-expense-list": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#app-main-container");
       if (container) {
         setupSharedExpenseList(container, state, store);
       }
@@ -149,7 +183,7 @@ function setupViewInteractions(
     }
 
     case "create-step-2": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#app-main-container");
       if (container) {
         setupCreateStep2(container, state, store);
       }
@@ -157,7 +191,7 @@ function setupViewInteractions(
     }
 
     case "create-step-3": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#app-main-container");
       if (container) {
         setupCreateStep3(container, state, store);
       }
@@ -165,7 +199,7 @@ function setupViewInteractions(
     }
 
     case "dashboard": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#app-main-container");
       if (container) {
         setupDashboard(container, state, store);
       }
@@ -189,7 +223,7 @@ function setupViewInteractions(
     }
 
     case "history": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#app-main-container");
       if (container) {
         setupHistory(container, state, store);
       }

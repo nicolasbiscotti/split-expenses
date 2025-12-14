@@ -71,7 +71,7 @@ export default function renderLoginScreen(): string {
  */
 export function setupLoginScreen(
   container: HTMLElement,
-  state: AppState,
+  _state: AppState,
   store: AppStore
 ): void {
   const signInButton =

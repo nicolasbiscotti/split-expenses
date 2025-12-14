@@ -56,8 +56,7 @@ function renderEmptyState(): string {
 function renderList(sharedExpenses: any[], store: AppStore): string {
   return `
     <header class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">💰 Mis Gastos</h1>
-      <p class="text-gray-600">Gestiona tus gastos compartidos</p>
+      
     </header>
 
     <button 
@@ -142,6 +141,11 @@ export function setupSharedExpenseList(
   );
   const createNewButton = container.querySelector("#create-new-shared-expense");
   const list = container.querySelector("#shared-expense-list");
+
+  console.log("setup shared expense list ==> ", container);
+  console.log("setup shared expense list ==> ", createFirstButton);
+  console.log("setup shared expense list ==> ", createNewButton);
+  console.log("setup shared expense list ==> ", list);
 
   // Handler: Iniciar flujo de creación
   const handleStartCreate = () => {
