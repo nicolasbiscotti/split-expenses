@@ -46,7 +46,7 @@ async function getUserById(uid: string): Promise<User | null> {
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
-      return { id: userSnap.id, ...userSnap.data() } as User;
+      return { uid: userSnap.id, ...userSnap.data() } as User;
     }
 
     return null;
@@ -67,7 +67,7 @@ async function getUserByEmail(email: string): Promise<User | null> {
 
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
-      return { id: userDoc.id, ...userDoc.data() } as User;
+      return { uid: userDoc.id, ...userDoc.data() } as User;
     }
 
     return null;
@@ -95,7 +95,7 @@ async function getUsersByIds(uids: string[]): Promise<User[]> {
       const querySnapshot = await getDocs(q);
 
       querySnapshot.docs.forEach((doc) => {
-        users.push({ id: doc.id, ...doc.data() } as User);
+        users.push({ uid: doc.id, ...doc.data() } as User);
       });
     }
 
@@ -122,7 +122,7 @@ async function searchUsersByEmail(emailPrefix: string): Promise<User[]> {
     return querySnapshot.docs.map(
       (doc) =>
         ({
-          id: doc.id,
+          uid: doc.id,
           ...doc.data(),
         } as User)
     );

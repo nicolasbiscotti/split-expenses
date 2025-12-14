@@ -35,7 +35,7 @@ export interface Payment {
 }
 
 export interface Balance {
-  userId: string; // User UID
+  participantId: string; // User UID
   balance: number;
 }
 
