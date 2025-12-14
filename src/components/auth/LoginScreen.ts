@@ -6,7 +6,7 @@ import type AppStore from "../../store";
  */
 export default function renderLoginScreen(): string {
   return `
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div class="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 p-4">
       <div class="max-w-md w-full">
         <!-- Logo y título -->
         <div class="text-center mb-8">

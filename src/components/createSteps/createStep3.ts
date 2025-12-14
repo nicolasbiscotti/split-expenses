@@ -1,7 +1,5 @@
-import type { NewSharedExpenseData } from "../../state/AppState";
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
-import type { SharedExpense } from "../../types";
 
 /**
  * Render: Paso 3 del wizard - Confirmación y creación
