@@ -15,15 +15,22 @@ import { db } from "../firebase/config";
 
 import type { Expense, Participant, Payment, SharedExpense } from "../types";
 import { participantService } from "./participantServices";
+import { inviteUserByEmail } from "./invitationService";
 
-export const USERS_COLLECTION_NAME = "users";
+const USERS_COLLECTION_NAME = "users";
+const PENDING_INVITATIONS_COLLECTION_NAME = "pendingInvitations";
 
 export const BASE_COLLECTION_PATH = `environments/${
   import.meta.env.VITE_FIRESTORE_DATA_ID
 }/${USERS_COLLECTION_NAME}`;
 
+export const PENDING_INVITATIONS_PATH = `environments/${
+  import.meta.env.VITE_FIRESTORE_DATA_ID
+}/${PENDING_INVITATIONS_COLLECTION_NAME}`;
+
 const EXPENSES_COLLECTION_NAME = "expenses";
 const PAYMENTS_COLLECTION_NAME = "payments";
+
 export const PARTICIPANTS_COLLECTION_NAME = "participants";
 export const SHARED_EXPENSES_COLLECTION_NAME = "sharedExpenses";
 export const CONTACTS_COLLECTION_NAME = "contacts";
@@ -257,7 +264,7 @@ export const paymentService = {
 
 // Shared Expenses Operation
 
-function getSharedExpensesPath(uid: string) {
+export function getSharedExpensesPath(uid: string) {
   return `${BASE_COLLECTION_PATH}/${uid}/${SHARED_EXPENSES_COLLECTION_NAME}`;
 }
 
@@ -273,18 +280,27 @@ export const sharedExpenseService = {
   ): Promise<string> => {
     const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
 
-    let docRef;
+    let sharedExpenseDocRef;
     await runTransaction(db, async () => {
-      docRef = await addDoc(collectionRef, data);
+      sharedExpenseDocRef = await addDoc(collectionRef, data);
 
       await participantService.createParticipantList(
-        docRef.id,
+        sharedExpenseDocRef.id,
         participants,
         uid
       );
+
+      await inviteUserByEmail(
+        participants[0].email || "",
+        sharedExpenseDocRef.id,
+        "Test Name",
+        uid,
+        "Test Name",
+        "participant"
+      );
     });
 
-    return docRef!.id;
+    return sharedExpenseDocRef!.id;
   },
 
   getAll: async (uid: string): Promise<SharedExpense[]> => {

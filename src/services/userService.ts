@@ -11,11 +11,11 @@ import {
 import { db } from "../firebase/config";
 
 import type { User } from "../types/auth";
-import { BASE_COLLECTION_PATH as USER_COLLECTION } from "./databaseService";
+import { BASE_COLLECTION_PATH as USERS_PATH } from "./databaseService";
 
 async function createOrUpdateUser(user: User): Promise<void> {
   try {
-    const userRef = doc(db, USER_COLLECTION, user.uid);
+    const userRef = doc(db, USERS_PATH, user.uid);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -42,7 +42,7 @@ async function createOrUpdateUser(user: User): Promise<void> {
  */
 async function getUserById(uid: string): Promise<User | null> {
   try {
-    const userRef = doc(db, USER_COLLECTION, uid);
+    const userRef = doc(db, USERS_PATH, uid);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -61,7 +61,7 @@ async function getUserById(uid: string): Promise<User | null> {
  */
 async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const usersRef = collection(db, USER_COLLECTION);
+    const usersRef = collection(db, USERS_PATH);
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
 
@@ -90,7 +90,7 @@ async function getUsersByIds(uids: string[]): Promise<User[]> {
     const chunks = chunkArray(uids, 10);
 
     for (const chunk of chunks) {
-      const usersRef = collection(db, USER_COLLECTION);
+      const usersRef = collection(db, USERS_PATH);
       const q = query(usersRef, where("uid", "in", chunk));
       const querySnapshot = await getDocs(q);
 
@@ -111,7 +111,7 @@ async function getUsersByIds(uids: string[]): Promise<User[]> {
  */
 async function searchUsersByEmail(emailPrefix: string): Promise<User[]> {
   try {
-    const usersRef = collection(db, USER_COLLECTION);
+    const usersRef = collection(db, USERS_PATH);
     const q = query(
       usersRef,
       where("email", ">=", emailPrefix),

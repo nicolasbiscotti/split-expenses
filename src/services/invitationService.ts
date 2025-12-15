@@ -17,6 +17,11 @@ import type {
 } from "../types/auth";
 import { userService } from "./userService";
 
+import {
+  getSharedExpensesPath,
+  PENDING_INVITATIONS_PATH,
+} from "./databaseService";
+
 /**
  * INVITACIONES POR EMAIL
  */
@@ -40,7 +45,11 @@ export async function inviteUserByEmail(
 
     if (existingUser) {
       // Usuario existe → agregarlo directamente al shared expense
-      const sharedExpenseRef = doc(db, "sharedExpenses", sharedExpenseId);
+      const sharedExpenseRef = doc(
+        db,
+        getSharedExpensesPath(invitedBy),
+        sharedExpenseId
+      );
 
       const updateData: any = {
         participants: arrayUnion(existingUser.uid),
@@ -70,7 +79,7 @@ export async function inviteUserByEmail(
         status: "pending",
       };
 
-      await addDoc(collection(db, "pendingInvitations"), invitation);
+      await addDoc(collection(db, PENDING_INVITATIONS_PATH), invitation);
 
       // TODO: Enviar email de invitación
 
@@ -93,7 +102,7 @@ export async function getPendingInvitationsByEmail(
   email: string
 ): Promise<PendingInvitation[]> {
   try {
-    const invitationsRef = collection(db, "pendingInvitations");
+    const invitationsRef = collection(db, PENDING_INVITATIONS_PATH);
     const q = query(
       invitationsRef,
       where("email", "==", email),
@@ -123,7 +132,7 @@ export async function acceptPendingInvitation(
   userId: string
 ): Promise<void> {
   try {
-    const invitationRef = doc(db, "pendingInvitations", invitationId);
+    const invitationRef = doc(db, PENDING_INVITATIONS_PATH, invitationId);
     const invitationSnap = await getDoc(invitationRef);
 
     if (!invitationSnap.exists()) {
@@ -135,7 +144,7 @@ export async function acceptPendingInvitation(
     // Agregar usuario al shared expense
     const sharedExpenseRef = doc(
       db,
-      "sharedExpenses",
+      getSharedExpensesPath(invitation.invitedBy),
       invitation.sharedExpenseId
     );
 
@@ -167,7 +176,7 @@ export async function rejectPendingInvitation(
   invitationId: string
 ): Promise<void> {
   try {
-    const invitationRef = doc(db, "pendingInvitations", invitationId);
+    const invitationRef = doc(db, PENDING_INVITATIONS_PATH, invitationId);
 
     await updateDoc(invitationRef, {
       status: "rejected",
@@ -296,7 +305,11 @@ export async function useInvitationLink(
     }
 
     // Agregar usuario al shared expense
-    const sharedExpenseRef = doc(db, "sharedExpenses", link.sharedExpenseId);
+    const sharedExpenseRef = doc(
+      db,
+      getSharedExpensesPath(link.createdBy),
+      link.sharedExpenseId
+    );
 
     const updateData: any = {
       participants: arrayUnion(userId),

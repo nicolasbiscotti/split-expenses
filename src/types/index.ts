@@ -5,6 +5,7 @@ export interface Participant {
   name: string;
   isAdmin: Boolean;
   contactId: string | null;
+  email?: string;
   appUserId?: string | null;
 }
 

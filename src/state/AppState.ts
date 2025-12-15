@@ -95,6 +95,7 @@ export default class AppState {
           name: c.name,
           isAdmin: store.getCurrentUser()?.uid === c.appUserId,
           contactId: c.id,
+          email: c.email,
           appUserId: c.appUserId,
         }));
     } else {
@@ -107,6 +108,7 @@ export default class AppState {
           name: c.name,
           isAdmin: store.getCurrentUser()?.uid === c.appUserId,
           contactId: c.id,
+          email: c.email,
           appUserId: c.appUserId,
         }));
     }

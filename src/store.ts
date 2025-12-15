@@ -158,6 +158,7 @@ export default class AppStore {
         name: p.name,
         isAdmin: p.isAdmin,
         contactId: p.contactId,
+        email: p.email,
         appUserId: p.appUserId,
       }));
 
