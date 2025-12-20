@@ -21,38 +21,33 @@ function getContactsRef(collectionPath: string) {
 
 async function createContact(
   contact: Omit<Contact, "id">,
-  uid: string
+  createdById: string
 ): Promise<string> {
-  const contactsPath = getContactsPath(uid);
+  const contactsPath = getContactsPath(createdById);
   const contactsRef = getContactsRef(contactsPath);
 
   const docRef = await addDoc(contactsRef, {
     ...contact,
     createdAt: Timestamp.now(),
+    createdById,
   });
 
   return docRef.id;
 }
 
-async function createContactList(uid: string): Promise<string[]> {
+async function createContactList(createdById: string): Promise<string[]> {
   const contactList = [
     { name: "Seba", email: "seba@example.com", appUserId: null },
     { name: "Nata", email: "nata@example.com", appUserId: null },
   ];
 
-  const contactsPath = getContactsPath(uid);
-  const contactsRef = getContactsRef(contactsPath);
-
   const promises = contactList.map((contact: Omit<Contact, "id">) =>
-    addDoc(contactsRef, {
-      ...contact,
-      createdAt: Timestamp.now(),
-    })
+    createContact(contact, createdById)
   );
 
-  const docRef = await Promise.all(promises);
+  const docRefIds = await Promise.all(promises);
 
-  return docRef.map((ref) => ref.id);
+  return docRefIds;
 }
 
 async function getContacts(uid: string): Promise<Contact[]> {
