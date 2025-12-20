@@ -5,7 +5,7 @@ import {
   query,
   Timestamp,
 } from "firebase/firestore";
-import type { Participant } from "../types";
+import type { Participant, SharedExpense } from "../types";
 import {
   BASE_COLLECTION_PATH,
   SHARED_EXPENSES_COLLECTION_NAME,
@@ -57,10 +57,12 @@ async function createParticipantList(
 }
 
 async function getParticipants(
-  sharedExpenseId: string,
-  uid: string
+  sharedExpense: SharedExpense
 ): Promise<Participant[]> {
-  const contactsPath = getParticipantsPath(sharedExpenseId, uid);
+  const contactsPath = getParticipantsPath(
+    sharedExpense.id,
+    sharedExpense.createdBy
+  );
   const contactsRef = getParticipantsRef(contactsPath);
   const querySnapshot = await getDocs(query(contactsRef));
 

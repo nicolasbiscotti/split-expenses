@@ -8,6 +8,7 @@ import {
   query,
   where,
   arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import type {
@@ -29,20 +30,21 @@ import type { SharedExpense } from "../types";
  */
 
 export async function inviteUserListByEmail(
-  emailParticipantType: { email: string; isAdmin: Boolean }[],
+  toInviteList: { email: string; isAdmin: Boolean; contactId: string }[],
   sharedExpenseData: SharedExpense,
   invitedBy: User
 ): Promise<
   Promise<{ success: boolean; userExists: boolean; message: string }>[]
 > {
   try {
-    const promises = emailParticipantType.map((emailType) => {
+    const promises = toInviteList.map((toInvite) => {
       let role: UserRole = "participant";
-      if (emailType.isAdmin) {
+      if (toInvite.isAdmin) {
         role = "administrator";
       }
       return inviteUserByEmail(
-        emailType.email,
+        toInvite.email,
+        toInvite.contactId,
         sharedExpenseData.id,
         sharedExpenseData.name,
         invitedBy.uid,
@@ -67,6 +69,7 @@ export async function inviteUserListByEmail(
  */
 export async function inviteUserByEmail(
   email: string,
+  contactId: string,
   sharedExpenseId: string,
   sharedExpenseName: string,
   invitedBy: string,
@@ -87,6 +90,7 @@ export async function inviteUserByEmail(
 
       const updateData: any = {
         participants: arrayUnion(existingUser.uid),
+        participantsPendingConfirmation: arrayRemove(contactId),
       };
 
       if (role === "administrator") {

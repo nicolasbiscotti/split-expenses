@@ -334,10 +334,7 @@ export default class AppStore {
     const sharedExpense = this.getSharedExpense(currentExpenseId!);
 
     const [participants, expenses, payments] = await Promise.all([
-      participantService.getParticipants(
-        currentExpenseId || "",
-        sharedExpense?.createdBy || ""
-      ),
+      participantService.getParticipants(sharedExpense!),
       expenseService.getExpenses(
         currentExpenseId || "",
         sharedExpense?.createdBy || ""

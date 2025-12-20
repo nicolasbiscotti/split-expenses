@@ -300,8 +300,14 @@ export const sharedExpenseService = {
         uid
       );
 
+      let toInviteList = participants.map((p) => ({
+        email: p.email || "",
+        isAdmin: p.isAdmin,
+        contactId: p.contactId || "",
+      }));
+
       await inviteUserListByEmail(
-        participants.map((p) => ({ email: p.email || "", isAdmin: p.isAdmin })),
+        toInviteList,
         { id: sharedExpenseDocRef.id, ...data },
         createdBy
       );
