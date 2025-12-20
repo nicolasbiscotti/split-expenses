@@ -88,14 +88,11 @@ export async function inviteUserByEmail(
         sharedExpenseId
       );
 
-      const updateData: any = {
-        participants: arrayUnion(existingUser.uid),
-        participantsPendingConfirmation: arrayRemove(contactId),
-      };
-
-      if (role === "administrator") {
-        updateData.administrators = arrayUnion(existingUser.uid);
-      }
+      const updateData = generateUpdateDataOnAddParticipant({
+        toAddUserId: existingUser.uid,
+        toRemoveContactId: contactId,
+        role,
+      });
 
       await updateDoc(sharedExpenseRef, updateData);
 
@@ -108,6 +105,7 @@ export async function inviteUserByEmail(
       // Usuario NO existe → crear invitación pendiente
       const invitation: Omit<PendingInvitation, "id"> = {
         email,
+        pendingContactId: contactId,
         sharedExpenseId,
         sharedExpenseName,
         invitedBy,
@@ -186,13 +184,11 @@ export async function acceptPendingInvitation(
       invitation.sharedExpenseId
     );
 
-    const updateData: any = {
-      participants: arrayUnion(userId),
-    };
-
-    if (invitation.role === "administrator") {
-      updateData.administrators = arrayUnion(userId);
-    }
+    const updateData = generateUpdateDataOnAddParticipant({
+      toAddUserId: userId,
+      toRemoveContactId: invitation.pendingContactId,
+      role: invitation.role,
+    });
 
     await updateDoc(sharedExpenseRef, updateData);
 
@@ -416,6 +412,27 @@ export async function getActiveInvitationLinks(
     console.error("Error getting active invitation links:", error);
     throw error;
   }
+}
+
+/**
+ * Helper:
+ */
+
+function generateUpdateDataOnAddParticipant(data: {
+  toAddUserId: string;
+  toRemoveContactId: string;
+  role: UserRole;
+}): any {
+  let updateData: any = {
+    participants: arrayUnion(data.toAddUserId),
+    participantsPendingConfirmation: arrayRemove(data.toRemoveContactId),
+  };
+
+  if (data.role === "administrator") {
+    updateData.administrators = arrayUnion(data.toAddUserId);
+  }
+
+  return updateData;
 }
 
 /**

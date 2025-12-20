@@ -21,6 +21,7 @@ export type UserRole = "administrator" | "participant";
 export interface PendingInvitation {
   id: string;
   email: string;
+  pendingContactId: string;
   sharedExpenseId: string;
   sharedExpenseName: string;
   invitedBy: string;

@@ -80,7 +80,7 @@ function renderSharedExpenseCard(
   _store: AppStore
 ): string {
   const totalAmount = sharedExpense.totalAmount;
-  const participants = sharedExpense.participants;
+  const numberOfParticipants = sharedExpense.participantContactIds.length;
 
   return `
     <div 
@@ -115,7 +115,7 @@ function renderSharedExpenseCard(
       </div>
       
       <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
-        <span>👥 ${participants.length} participantes</span>
+        <span>👥 ${numberOfParticipants} participantes</span>
         <span class="font-semibold text-blue-600">$${totalAmount.toFixed(
           2
         )}</span>
