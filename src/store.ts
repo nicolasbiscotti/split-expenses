@@ -65,10 +65,12 @@ export default class AppStore {
   }
 
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
+    const sharedExpense = this.getSharedExpense(expense.sharedExpenseId);
+
     try {
       const expenseId = await expenseService.createExpense(
         expense,
-        this.getCurrentUser()?.uid || ""
+        sharedExpense?.createdBy || ""
       );
       expense.id = expenseId;
       this.expenses.push(expense);
@@ -108,10 +110,12 @@ export default class AppStore {
   }
 
   async addPayment(payment: Payment, currentView: ViewType): Promise<void> {
+    const sharedExpense = this.getSharedExpense(payment.sharedExpenseId);
+
     try {
       const paymentId = await paymentService.createPayment(
         payment,
-        this.getCurrentUser()?.uid || ""
+        sharedExpense?.createdBy || ""
       );
       payment.id = paymentId;
       this.payments.push(payment);
@@ -309,18 +313,21 @@ export default class AppStore {
   }
 
   private async loadCurredSharedExpenseDetails() {
+    const currentExpenseId = this.getCurrentSharedExpenseId();
+    const sharedExpense = this.getSharedExpense(currentExpenseId!);
+
     const [participants, expenses, payments] = await Promise.all([
       participantService.getParticipants(
-        this.currentSharedExpenseId || "",
-        this.getCurrentUser()?.uid || ""
+        currentExpenseId || "",
+        sharedExpense?.createdBy || ""
       ),
       expenseService.getExpenses(
-        this.currentSharedExpenseId || "",
-        this.getCurrentUser()?.uid || ""
+        currentExpenseId || "",
+        sharedExpense?.createdBy || ""
       ),
       paymentService.getPayments(
-        this.currentSharedExpenseId || "",
-        this.getCurrentUser()?.uid || ""
+        currentExpenseId || "",
+        sharedExpense?.createdBy || ""
       ),
     ]);
 
