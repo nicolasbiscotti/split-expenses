@@ -87,8 +87,8 @@ export default class AppStore {
     try {
       await expenseService.deleteExpense(
         id,
-        this.currentSharedExpenseId || "",
-        this.getCurrentUser()?.uid || ""
+        this.currentSharedExpenseId!,
+        this.getSharedExpense(this.currentSharedExpenseId!)?.createdBy!
       );
       this.expenses = this.expenses.filter((e) => e.id !== id);
       console.log("Expense deleted:", id);
@@ -132,8 +132,8 @@ export default class AppStore {
     try {
       await paymentService.deletePayment(
         id,
-        this.currentSharedExpenseId || "",
-        this.getCurrentUser()?.uid || ""
+        this.currentSharedExpenseId!,
+        this.getSharedExpense(this.currentSharedExpenseId!)?.createdBy!
       );
       this.payments = this.payments.filter((p) => p.id !== id);
       console.log("Payment deleted:", id);
@@ -157,6 +157,9 @@ export default class AppStore {
   async createSharedExpense(
     sharedExpenseData: NewSharedExpenseData
   ): Promise<string> {
+    const user = this.getCurrentUser()!;
+    const currentUserId = user.uid;
+
     const participantsToCreate: Omit<Participant, "id">[] =
       sharedExpenseData.participants.map((p) => ({
         name: p.name,
@@ -174,9 +177,18 @@ export default class AppStore {
       totalAmount: 0,
 
       createdAt: new Date().toISOString(),
-      createdBy: this.getCurrentUser()!.uid,
-      administrators: [this.getCurrentUser()!.uid],
-      participants: [...participantsToCreate.map((p) => p.appUserId || "")],
+      createdBy: currentUserId,
+      administrators: [currentUserId],
+      participants: [currentUserId],
+
+      participantsPendingConfirmation: sharedExpenseData.participants
+        .filter((p) => p.appUserId !== currentUserId)
+        .map(
+          (p) => p.contactId || "pending participant added without contactId"
+        ),
+      participantContactIds: sharedExpenseData.participants.map(
+        (p) => p.contactId || "participant contactId added without contactId"
+      ),
     };
 
     const currentSharedExpense: SharedExpense = {
@@ -185,17 +197,22 @@ export default class AppStore {
     };
 
     try {
-      const sharedExpenseId = await sharedExpenseService.create(
-        { ...currentSharedExpenseData },
-        participantsToCreate,
-        this.getCurrentUser()?.uid || ""
-      );
+      if (user !== null) {
+        const sharedExpenseId = await sharedExpenseService.create(
+          { ...currentSharedExpenseData },
+          participantsToCreate,
+          user
+        );
 
-      currentSharedExpense.id = sharedExpenseId;
-      this.sharedExpenses.push(currentSharedExpense);
+        currentSharedExpense.id = sharedExpenseId;
+        this.sharedExpenses.push(currentSharedExpense);
 
-      console.log("Shared expense created with id:", sharedExpenseId);
-      return sharedExpenseId;
+        console.log("Shared expense created with id ==> ", sharedExpenseId);
+        return sharedExpenseId;
+      }
+
+      console.log("Shared could not be created without logged user ==>");
+      return "";
     } catch (error) {
       console.error("Failed to create shared expense:", error);
       throw error;
@@ -216,7 +233,7 @@ export default class AppStore {
       await sharedExpenseService.update(
         id,
         updates,
-        this.getCurrentUser()?.uid || ""
+        this.sharedExpenses[index].createdBy
       );
     }
   }

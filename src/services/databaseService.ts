@@ -10,12 +10,20 @@ import {
   orderBy,
   Timestamp,
   runTransaction,
+  collectionGroup,
+  or,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-import type { Expense, Participant, Payment, SharedExpense } from "../types";
+import type {
+  Expense,
+  Participant,
+  Payment,
+  SharedExpense,
+  User,
+} from "../types";
 import { participantService } from "./participantServices";
-import { inviteUserByEmail } from "./invitationService";
+import { inviteUserListByEmail } from "./invitationService";
 
 const USERS_COLLECTION_NAME = "users";
 const PENDING_INVITATIONS_COLLECTION_NAME = "pendingInvitations";
@@ -276,8 +284,10 @@ export const sharedExpenseService = {
   create: async (
     data: Omit<SharedExpense, "id">,
     participants: Omit<Participant, "id">[],
-    uid: string
+    createdBy: User
   ): Promise<string> => {
+    const uid = createdBy.uid;
+
     const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
 
     let sharedExpenseDocRef;
@@ -290,13 +300,10 @@ export const sharedExpenseService = {
         uid
       );
 
-      await inviteUserByEmail(
-        participants[0].email || "",
-        sharedExpenseDocRef.id,
-        "Test Name",
-        uid,
-        "Test Name",
-        "participant"
+      await inviteUserListByEmail(
+        participants.map((p) => ({ email: p.email || "", isAdmin: p.isAdmin })),
+        { id: sharedExpenseDocRef.id, ...data },
+        createdBy
       );
     });
 
@@ -304,9 +311,33 @@ export const sharedExpenseService = {
   },
 
   getAll: async (uid: string): Promise<SharedExpense[]> => {
-    const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
-    const snapshot = await getDocs(collectionRef);
-    return snapshot.docs.map(
+    // 1. Reference the Collection Group (searches all collections named 'sharedExpenses')
+    const expensesGroupRef = collectionGroup(
+      db,
+      SHARED_EXPENSES_COLLECTION_NAME
+    );
+
+    // 2. Build the query with an OR condition
+    const q = query(
+      expensesGroupRef,
+      // Filter by Environment to avoid data leaks across environments
+      // where("environmentId", "==", currentEnvId),
+      // The OR condition: Is Admin OR Is Participant
+      or(
+        where("administrators", "array-contains", uid),
+        where("participants", "array-contains", uid)
+      )
+    );
+
+    // 3. Execute
+    const querySnapshot = await getDocs(q);
+    // querySnapshot.forEach((doc) => {
+    //   console.log(doc.id, " => ", doc.data());
+    // });
+
+    // const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
+    // const snapshot = await getDocs(collectionRef);
+    return querySnapshot.docs.map(
       (doc) => ({ id: doc.id, ...doc.data() } as SharedExpense)
     );
   },

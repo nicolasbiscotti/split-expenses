@@ -196,12 +196,3 @@ export function setupUserProfile(
   // Event listeners
   logoutButton?.addEventListener("click", handleLogout);
 }
-
-/**
- * NOTA: Necesitas agregar esta función global en main.ts:
- *
- * window.selectSharedExpense = (id: string) => {
- *   store.setCurrentSharedExpenseId(id);
- *   state.setCurrentView('dashboard', store);
- * };
- */

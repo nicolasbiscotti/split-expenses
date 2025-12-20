@@ -24,8 +24,8 @@ window.setView = (view) => {
   state.setCurrentView(view, store);
 };
 
-window.selectSharedExpense = (id: string) => {
-  store.setCurrentSharedExpenseId(id);
+window.selectSharedExpense = async (id: string) => {
+  await store.setCurrentSharedExpenseId(id);
   state.setCurrentView("dashboard", store);
 };
 

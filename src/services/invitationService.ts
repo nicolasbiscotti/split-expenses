@@ -14,6 +14,7 @@ import type {
   PendingInvitation,
   InvitationLink,
   UserRole,
+  User,
 } from "../types/auth";
 import { userService } from "./userService";
 
@@ -21,10 +22,43 @@ import {
   getSharedExpensesPath,
   PENDING_INVITATIONS_PATH,
 } from "./databaseService";
+import type { SharedExpense } from "../types";
 
 /**
  * INVITACIONES POR EMAIL
  */
+
+export async function inviteUserListByEmail(
+  emailParticipantType: { email: string; isAdmin: Boolean }[],
+  sharedExpenseData: SharedExpense,
+  invitedBy: User
+): Promise<
+  Promise<{ success: boolean; userExists: boolean; message: string }>[]
+> {
+  try {
+    const promises = emailParticipantType.map((emailType) => {
+      let role: UserRole = "participant";
+      if (emailType.isAdmin) {
+        role = "administrator";
+      }
+      return inviteUserByEmail(
+        emailType.email,
+        sharedExpenseData.id,
+        sharedExpenseData.name,
+        invitedBy.uid,
+        invitedBy.displayName,
+        role
+      );
+    });
+
+    await Promise.all(promises);
+
+    return promises;
+  } catch (error) {
+    console.error("Error inviting user by email:", error);
+    throw error;
+  }
+}
 
 /**
  * Invitar usuario por email

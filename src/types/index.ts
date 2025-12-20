@@ -64,6 +64,9 @@ export interface SharedExpense {
   createdBy: string; // User UID del creador
   administrators: string[]; // Array de User UIDs
   participants: string[]; // Array de User UIDs (incluye admins)
+
+  participantsPendingConfirmation: string[];
+  participantContactIds: string[];
 }
 
 export interface Contact {
