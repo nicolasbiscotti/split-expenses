@@ -6,10 +6,10 @@ import type AppStore from "../../store";
  */
 export default function renderCreateStep3(
   state: AppState,
-  store: AppStore
+  _store: AppStore
 ): string {
   const data = state.getNewSharedExpenseData();
-  const participants = store.getContactsToBeParticipants(data.participantIds);
+  const participants = data.participants;
 
   return `
     <div class="mb-6">
