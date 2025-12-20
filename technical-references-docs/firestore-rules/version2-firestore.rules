@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // New helper to get the Shared Expense data from its new path.
+    // NOTE: This function requires knowing the 'ownerId' and 'environmentId'
+    // of the sharedExpense document being referenced.
+    function getSharedExpense(environmentId, ownerId, sharedExpenseId) {
+      return get(/databases/$(database)/documents/environments/$(environmentId)/users/$(ownerId)/sharedExpenses/$(sharedExpenseId));
+    }
+
+    function isAdmin(environmentId, ownerId, sharedExpenseId) {
+      return isAuthenticated() &&
+        request.auth.uid in getSharedExpense(environmentId, ownerId, sharedExpenseId).data.administrators;
+    }
+
+    function isParticipant(environmentId, ownerId, sharedExpenseId) {
+      return isAuthenticated() &&
+        request.auth.uid in getSharedExpense(environmentId, ownerId, sharedExpenseId).data.participants;
+    }
+
+    function isAdminOrParticipant(environmentId, ownerId, sharedExpenseId) {
+      return isAdmin(environmentId, ownerId, sharedExpenseId) || isParticipant(environmentId, ownerId, sharedExpenseId);
+    }
+
+    // --- MAIN RULES ---
+
+    // NOTE: The /users/{userId} path is gone, as users are now only used in the context of the path.
+    // Access to the root /users/{userId} document is often managed by a separate rule not shown here.
+
+    // Shared Expenses (and nested data)
+    // The path now captures three critical IDs: environmentId, ownerId, and sharedExpenseId
+    match /environments/{environmentId}/users/{ownerId}/sharedExpenses/{sharedExpenseId} {
+
+      // READ: Check permissions using the new path variables.
+      allow read: if isAdminOrParticipant(environmentId, ownerId, sharedExpenseId);
+
+      // CREATE: The creating user must be authenticated, be the owner, and be included in the initial arrays.
+      allow create: if isAuthenticated() &&
+        request.auth.uid == ownerId && // The creator must be the owner of the document path
+        request.resource.data.createdBy == request.auth.uid && // Redundant, but good check
+        request.auth.uid in request.resource.data.administrators &&
+        request.auth.uid in request.resource.data.participants;
+
+      // UPDATE/DELETE: Only an admin of the expense can do this.
+      allow update, delete: if isAdmin(environmentId, ownerId, sharedExpenseId);
+
+      // Expenses
+      match /expenses/{expenseId} {
+        // Since Expenses documents don't naturally hold the ownerId of the parent sharedExpense
+        // in their own path, we must assume the expense document holds a reference to the 
+        // Shared Expense's owner, or we use the parent path variables.
+
+        // We use the parent match block variables (environmentId, ownerId, sharedExpenseId)
+        // that are automatically inherited by this nested match block.
+
+        allow read: if isAuthenticated() &&
+          isAdminOrParticipant(environmentId, ownerId, sharedExpenseId);
+
+        allow create: if isAuthenticated() &&
+          isAdminOrParticipant(environmentId, ownerId, sharedExpenseId) &&
+          request.resource.data.createdBy == request.auth.uid;
+
+        allow delete: if isAuthenticated() && (
+          // Own expense not created by admin
+          (resource.data.createdBy == request.auth.uid &&
+           resource.data.createdByAdmin == false) ||
+          // Is admin
+          isAdmin(environmentId, ownerId, sharedExpenseId)
+        );
+      }
+
+      // Payments
+      match /payments/{paymentId} {
+        // Similar to Expenses, we use the parent match block variables.
+
+        allow read: if isAuthenticated() &&
+          isAdminOrParticipant(environmentId, ownerId, sharedExpenseId);
+
+        allow create: if isAuthenticated() &&
+          isAdminOrParticipant(environmentId, ownerId, sharedExpenseId) &&
+          request.resource.data.createdBy == request.auth.uid;
+
+        allow delete: if isAuthenticated() && (
+          (resource.data.createdBy == request.auth.uid &&
+           resource.data.createdByAdmin == false) ||
+          isAdmin(environmentId, ownerId, sharedExpenseId)
+        );
+      }
+    }
+
+    // Pending Invitations
+    // NOTE: This collection's path is simpler and does not include the ownerId.
+    match /environments/{environmentId}/pendingInvitations/{invitationId} {
+      allow read: if isAuthenticated() &&
+        request.auth.token.email == resource.data.email;
+
+      // CREATE: Since this collection is NOT nested under a user, we must assume the
+      // `request.resource.data` of the invitation holds the reference to the
+      // target shared expense's owner (e.g., `targetSharedExpenseOwnerId`).
+
+      // ASSUMPTION: The new invitation document MUST contain the fields:
+      // 1. `sharedExpenseId`
+      // 2. `targetSharedExpenseOwnerId`
+      allow create: if isAuthenticated() &&
+        isAdmin(
+          environmentId,
+          request.resource.data.targetSharedExpenseOwnerId,
+          request.resource.data.sharedExpenseId
+        );
+
+      allow delete: if isAuthenticated();
+    }
+  }
+}
