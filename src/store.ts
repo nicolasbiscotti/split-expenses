@@ -21,7 +21,6 @@ import type {
   ViewType,
   User,
   ResolvedContact,
-  GlobalContact,
 } from "./types";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";

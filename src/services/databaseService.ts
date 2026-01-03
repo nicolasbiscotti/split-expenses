@@ -17,13 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-import type {
-  Expense,
-  Payment,
-  SharedExpense,
-  User,
-  GlobalContact,
-} from "../types";
+import type { Expense, Payment, SharedExpense, User } from "../types";
 import { globalContactService } from "./globalContactService";
 
 // Collection paths

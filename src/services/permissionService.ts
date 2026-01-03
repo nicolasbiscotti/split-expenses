@@ -12,10 +12,11 @@ import type {
  */
 export function calculateUserPermissions(
   sharedExpense: SharedExpense,
-  currentUserId: string
+  currentUserContactId: string
 ): UserPermissions {
-  const isAdmin = sharedExpense.administrators.includes(currentUserId);
-  const isParticipant = sharedExpense.participants.includes(currentUserId);
+  const isAdmin = sharedExpense.adminContactIds.includes(currentUserContactId);
+  const isParticipant =
+    sharedExpense.participantContactIds.includes(currentUserContactId);
 
   return {
     isAdmin,
@@ -85,14 +86,14 @@ export function canDeletePayment(
  */
 export function validateCloseSharedExpense(
   sharedExpense: SharedExpense,
-  currentUserId: string,
+  currentUserContactId: string,
   expenses: Expense[],
   balances: Balance[]
 ): CloseValidation {
   const reasons: string[] = [];
 
   // 1. Verificar que sea admin
-  if (!sharedExpense.administrators.includes(currentUserId)) {
+  if (!sharedExpense.adminContactIds.includes(currentUserContactId)) {
     reasons.push(
       "Solo los administradores pueden cerrar este gasto compartido"
     );
@@ -126,9 +127,9 @@ export function validateCloseSharedExpense(
  */
 export function canAddParticipants(
   sharedExpense: SharedExpense,
-  currentUserId: string
+  currentUserContactId: string
 ): boolean {
-  return sharedExpense.administrators.includes(currentUserId);
+  return sharedExpense.adminContactIds.includes(currentUserContactId);
 }
 
 /**
@@ -136,11 +137,11 @@ export function canAddParticipants(
  */
 export function canViewSharedExpense(
   sharedExpense: SharedExpense,
-  currentUserId: string
+  currentUserContactId: string
 ): boolean {
   return (
-    sharedExpense.administrators.includes(currentUserId) ||
-    sharedExpense.participants.includes(currentUserId)
+    sharedExpense.adminContactIds.includes(currentUserContactId) ||
+    sharedExpense.participantContactIds.includes(currentUserContactId)
   );
 }
 
@@ -159,13 +160,13 @@ export function filterVisibleSharedExpenses(
  */
 export function getUserRole(
   sharedExpense: SharedExpense,
-  userId: string
+  userContactId: string
 ): "administrator" | "participant" | null {
-  if (sharedExpense.administrators.includes(userId)) {
+  if (sharedExpense.adminContactIds.includes(userContactId)) {
     return "administrator";
   }
 
-  if (sharedExpense.participants.includes(userId)) {
+  if (sharedExpense.participantContactIds.includes(userContactId)) {
     return "participant";
   }
 
@@ -178,7 +179,7 @@ export function getUserRole(
 export function areAllParticipantsAdmins(
   sharedExpense: SharedExpense
 ): boolean {
-  return sharedExpense.participants.every((p) =>
-    sharedExpense.administrators.includes(p)
+  return sharedExpense.participantContactIds.every((participantId) =>
+    sharedExpense.adminContactIds.includes(participantId)
   );
 }

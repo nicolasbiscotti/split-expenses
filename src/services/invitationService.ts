@@ -46,6 +46,7 @@ export async function inviteUserListByEmail(
         toInvite.email,
         toInvite.contactId,
         sharedExpenseData.id,
+        sharedExpenseData.createdBy,
         sharedExpenseData.name,
         invitedBy.uid,
         invitedBy.displayName,
@@ -71,6 +72,7 @@ export async function inviteUserByEmail(
   email: string,
   contactId: string,
   sharedExpenseId: string,
+  sharedExpenseOwnerId: string,
   sharedExpenseName: string,
   invitedBy: string,
   invitedByName: string,
@@ -105,8 +107,9 @@ export async function inviteUserByEmail(
       // Usuario NO existe → crear invitación pendiente
       const invitation: Omit<PendingInvitation, "id"> = {
         email,
-        pendingContactId: contactId,
+        globalContactId: contactId,
         sharedExpenseId,
+        sharedExpenseOwnerId,
         sharedExpenseName,
         invitedBy,
         invitedByName,
@@ -186,7 +189,7 @@ export async function acceptPendingInvitation(
 
     const updateData = generateUpdateDataOnAddParticipant({
       toAddUserId: userId,
-      toRemoveContactId: invitation.pendingContactId,
+      toRemoveContactId: invitation.globalContactId,
       role: invitation.role,
     });
 
