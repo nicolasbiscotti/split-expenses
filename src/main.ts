@@ -29,20 +29,6 @@ window.selectSharedExpense = async (id: string) => {
   state.setCurrentView("dashboard", store);
 };
 
-// // NOTA: Estas funciones ahora están en setupHistory
-// // pero las mantenemos aquí para compatibilidad con onclick inline
-// window.deleteExpense = (id: string) => {
-//   if (confirm("¿Eliminar este gasto?")) {
-//     store.deleteExpense(id, "history");
-//   }
-// };
-
-// window.deletePayment = (id: string) => {
-//   if (confirm("¿Eliminar este pago?")) {
-//     store.deletePayment(id, "history");
-//   }
-// };
-
 // ==================== FORM SUBMISSIONS ====================
 document.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -60,18 +46,21 @@ document.addEventListener("submit", async (e) => {
       return;
     }
 
-    const isAdmin = sharedExpense.administrators.includes(currentUser.uid);
+    const currentUserContact = store.getCurrentUserContact();
+    const isAdmin = currentUserContact
+      ? sharedExpense.adminContactIds.includes(currentUserContact.id)
+      : false;
 
     try {
       await store.addExpense(
         {
           sharedExpenseId: currentExpenseId!,
-          payerId: formData.get("payerId") as string,
+          payerContactId: formData.get("payerContactId") as string, // Updated field name
           amount: parseFloat(formData.get("amount") as string),
           description: formData.get("description") as string,
           date: new Date().toISOString(),
 
-          // NUEVO: Auditoría
+          // Audit
           createdBy: currentUser.uid,
           createdByAdmin: isAdmin,
         } as Expense,
@@ -85,8 +74,8 @@ document.addEventListener("submit", async (e) => {
   // Payment Form
   if (form.id === "payment-form") {
     const formData = new FormData(form);
-    const fromId = formData.get("fromId") as string;
-    const toId = formData.get("toId") as string;
+    const fromContactId = formData.get("fromContactId") as string; // Updated field name
+    const toContactId = formData.get("toContactId") as string; // Updated field name
     const currentUser = store.getCurrentUser();
     const currentExpenseId = store.getCurrentSharedExpenseId();
     const sharedExpense = store.getSharedExpense(currentExpenseId!);
@@ -96,19 +85,22 @@ document.addEventListener("submit", async (e) => {
       return;
     }
 
-    if (fromId === toId) {
+    if (fromContactId === toContactId) {
       alert("No puedes registrar un pago a la misma persona");
       return;
     }
 
-    const isAdmin = sharedExpense.administrators.includes(currentUser.uid);
+    const currentUserContact = store.getCurrentUserContact();
+    const isAdmin = currentUserContact
+      ? sharedExpense.adminContactIds.includes(currentUserContact.id)
+      : false;
 
     try {
       await store.addPayment(
         {
           sharedExpenseId: currentExpenseId,
-          fromId,
-          toId,
+          fromContactId, // Updated field name
+          toContactId, // Updated field name
           amount: parseFloat(formData.get("amount") as string),
           date: new Date().toISOString(),
           createdBy: currentUser.uid,
@@ -124,12 +116,11 @@ document.addEventListener("submit", async (e) => {
 
 // ==================== START APP ====================
 state.subscribeRender(render);
-// store.startApp();
 
-// Observer de autenticación
+// Auth state observer
 onAuthStateChange(async (firebaseUser) => {
   if (firebaseUser) {
-    console.log("Legged User ==> ", firebaseUser.email);
+    console.log("Logged User ==> ", firebaseUser.email);
 
     const user = firebaseUserToUser(firebaseUser);
     await userService.createOrUpdateUser(user);
@@ -137,7 +128,7 @@ onAuthStateChange(async (firebaseUser) => {
 
     await store.loadFromStorage();
   } else {
-    console.log("No legged User ==> ");
+    console.log("No logged User ==> ");
 
     store.setCurrentUser(null);
     state.setCurrentView("login", store);

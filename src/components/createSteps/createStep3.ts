@@ -2,14 +2,15 @@ import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 
 /**
- * Render: Paso 3 del wizard - Confirmación y creación
+ * Render: Step 3 of the wizard - Confirmation and creation
  */
 export default function renderCreateStep3(
   state: AppState,
   _store: AppStore
 ): string {
   const data = state.getNewSharedExpenseData();
-  const participants = data.participants;
+  const participants = data.selectedContacts;
+  const adminIds = data.adminContactIds;
 
   return `
     <div class="mb-6">
@@ -52,23 +53,51 @@ export default function renderCreateStep3(
         
         <div>
           <span class="text-gray-600">Participantes:</span>
-          <div class="mt-2 flex flex-wrap gap-2">
+          <div class="mt-2 space-y-1">
             ${participants
-              .map(
-                (p) => `
-              <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                ${p.name}
-              </span>
-            `
-              )
+              .map((p) => {
+                const isAdmin = adminIds.includes(p.id);
+                return `
+                  <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium">${p.displayName}</span>
+                      ${
+                        !p.hasAccount
+                          ? '<span class="text-xs text-gray-500">(sin cuenta)</span>'
+                          : ""
+                      }
+                    </div>
+                    ${
+                      isAdmin
+                        ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Admin</span>'
+                        : '<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Participante</span>'
+                    }
+                  </div>
+                `;
+              })
               .join("")}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-      <p class="text-sm text-blue-800">
+    <!-- Info about participants without accounts -->
+    ${
+      participants.some((p) => !p.hasAccount)
+        ? `
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <p class="text-sm text-blue-800">
+          <strong>ℹ️ Nota:</strong> Algunos participantes aún no tienen cuenta. 
+          Como administrador, podrás registrar gastos y pagos en su nombre. 
+          Cuando creen su cuenta, tendrán acceso automático.
+        </p>
+      </div>
+    `
+        : ""
+    }
+
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+      <p class="text-sm text-green-800">
         ${
           data.type === "unique"
             ? "✓ Este gasto compartido estará activo hasta que lo cierres manualmente cuando los balances estén correctos."
@@ -94,7 +123,7 @@ export default function renderCreateStep3(
 }
 
 /**
- * Setup: Maneja la creación del shared expense
+ * Setup: Handle shared expense creation
  */
 export function setupCreateStep3(
   container: HTMLElement,
@@ -116,7 +145,7 @@ export function setupCreateStep3(
   const handleCreate = async () => {
     if (!createButton) return;
 
-    // Mostrar loading
+    // Show loading
     createButton.disabled = true;
     buttonText?.classList.add("hidden");
     buttonLoading?.classList.remove("hidden");
@@ -131,26 +160,29 @@ export function setupCreateStep3(
 
       const data = state.getNewSharedExpenseData();
 
-      // Validación final
+      // Final validation
       if (!state.isNewSharedExpenseValid()) {
-        throw new Error("Datos inválidos");
+        throw new Error(
+          "Datos inválidos. Verifica que tengas al menos 2 participantes y 1 administrador."
+        );
       }
 
       const sharedExpenseId = await store.createSharedExpense(data);
       await store.setCurrentSharedExpenseId(sharedExpenseId);
 
-      // Limpiar datos temporales
+      // Clear temporary data
       state.resetNewSharedExpenseData();
 
-      // Ir al dashboard del nuevo gasto
+      // Go to dashboard
       state.goToDashboard(store);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al crear gasto compartido:", error);
       alert(
-        "Hubo un error al crear el gasto compartido. Por favor intenta de nuevo."
+        error.message ||
+          "Hubo un error al crear el gasto compartido. Por favor intenta de nuevo."
       );
 
-      // Restaurar botón
+      // Restore button
       createButton.disabled = false;
       buttonText?.classList.remove("hidden");
       buttonLoading?.classList.add("hidden");

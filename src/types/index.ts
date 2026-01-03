@@ -1,51 +1,78 @@
 export * from "./auth";
 
-export interface Participant {
+// ==================== GLOBAL CONTACT ====================
+// Stored in: environments/{env}/globalContacts/{contactId}
+// This is a GLOBAL collection - contacts are shared across all users
+export interface GlobalContact {
   id: string;
-  name: string;
-  isAdmin: Boolean;
-  contactId: string | null;
-  email?: string;
-  appUserId?: string | null;
+  email: string; // Normalized (lowercase, trimmed) - UNIQUE
+  appUserId: string | null; // null until user creates account
+  createdAt: string;
+  createdBy: string; // UID of user who first created this contact
 }
 
+// ==================== CONTACT ALIAS ====================
+// Stored in: environments/{env}/users/{uid}/contactAliases/{globalContactId}
+// Each user has their own "nickname" for contacts they know
+export interface ContactAlias {
+  globalContactId: string; // Reference to GlobalContact
+  displayName: string; // User's personal name for this contact
+  addedAt: string;
+}
+
+// ==================== RESOLVED CONTACT ====================
+// Combined view for UI (GlobalContact + user's alias)
+// This is NOT stored in Firestore - it's computed at runtime
+export interface ResolvedContact {
+  id: string; // Global Contact ID
+  email: string;
+  displayName: string; // From user's alias, or email if no alias
+  appUserId: string | null;
+  hasAccount: boolean; // Convenience flag: appUserId !== null
+}
+
+// ==================== EXPENSE (UPDATED) ====================
 export interface Expense {
   id: string;
   sharedExpenseId: string;
-  payerId: string; // User UID
+  payerContactId: string; // Global Contact ID (was payerId)
   amount: number;
   description: string;
   date: string;
 
-  // Auditoría
-  createdBy: string; // User UID
-  createdByAdmin: boolean; // Si fue creado por un admin
+  // Audit
+  createdBy: string; // User UID who registered this
+  createdByAdmin: boolean;
 }
 
+// ==================== PAYMENT (UPDATED) ====================
 export interface Payment {
   id: string;
   sharedExpenseId: string;
-  fromId: string; // User UID
-  toId: string; // User UID
+  fromContactId: string; // Global Contact ID (was fromId)
+  toContactId: string; // Global Contact ID (was toId)
   amount: number;
   date: string;
 
-  // Auditoría
+  // Audit
   createdBy: string;
   createdByAdmin: boolean;
 }
 
+// ==================== BALANCE (UPDATED) ====================
 export interface Balance {
-  participantId: string; // User UID
+  participantContactId: string; // Global Contact ID (was participantId)
   balance: number;
 }
 
+// ==================== DEBT (UPDATED) ====================
 export interface Debt {
-  fromId: string; // User UID
-  toId: string; // User UID
+  fromContactId: string; // Global Contact ID (was fromId)
+  toContactId: string; // Global Contact ID (was toId)
   amount: number;
 }
 
+// ==================== SHARED EXPENSE (UPDATED) ====================
 export type SharedExpenseType = "unique" | "recurring";
 export type SharedExpenseStatus = "active" | "closed";
 
@@ -60,22 +87,19 @@ export interface SharedExpense {
   closedAt?: string;
   periodName?: string;
 
-  // Ownership y roles
-  createdBy: string; // User UID del creador
-  administrators: string[]; // Array de User UIDs
-  participants: string[]; // Array de User UIDs (incluye admins)
+  // Ownership
+  createdBy: string; // User UID of creator
 
-  participantsPendingConfirmation: string[];
-  participantContactIds: string[];
+  // Access Control - ALL using Global Contact IDs
+  adminContactIds: string[]; // Global Contact IDs with admin role
+  participantContactIds: string[]; // All participants (includes admins)
+
+  // For Firestore rules - User IDs who have confirmed accounts
+  // This is populated when a contact's appUserId becomes available
+  confirmedUserIds: string[]; // User UIDs who have accounts and confirmed
 }
 
-export interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  appUserId: string | null;
-}
-
+// ==================== PERIOD ====================
 export interface Period {
   id: string;
   sharedExpenseId: string;
@@ -85,7 +109,7 @@ export interface Period {
   status: SharedExpenseStatus;
 }
 
-// View types
+// ==================== VIEW TYPES ====================
 export type ViewType =
   | "login"
   | "shared-expense-list"
@@ -100,3 +124,23 @@ export type ViewType =
   | "user-profile";
 
 export type StepValue = 1 | 2 | 3;
+
+// ==================== DEPRECATED - TO BE REMOVED ====================
+// Keep temporarily for backward compatibility during migration
+/** @deprecated Use GlobalContact + ContactAlias instead */
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  appUserId: string | null;
+}
+
+/** @deprecated Participants are now derived from GlobalContacts */
+export interface Participant {
+  id: string;
+  name: string;
+  isAdmin: Boolean;
+  contactId: string | null;
+  email?: string;
+  appUserId?: string | null;
+}

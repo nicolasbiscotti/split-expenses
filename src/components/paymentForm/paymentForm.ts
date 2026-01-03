@@ -4,7 +4,7 @@ import { calculateBalances, calculateDebts } from "../../util/calculations";
 import renderDebtList from "../dashboard/debtList";
 
 /**
- * Render: Formulario para registrar pagos + sugerencias de deudas
+ * Render: Form to register payments + debt suggestions
  */
 export default function renderPaymentForm(
   _state: AppState,
@@ -15,35 +15,60 @@ export default function renderPaymentForm(
   const payments = store.getPayments();
   const balances = calculateBalances(participants, expenses, payments);
   const debts = calculateDebts(balances);
+  const currentUserContact = store.getCurrentUserContact();
+  const isAdmin = store.isCurrentUserAdmin();
 
   return `
     <div class="space-y-4">
       <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-xl font-bold mb-4">Registrar Pago</h2>
+        
+        ${
+          !isAdmin
+            ? `
+          <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+            <p class="text-sm text-yellow-800">
+              Solo puedes registrar tus propios pagos. Contacta al administrador para registrar pagos de otros participantes.
+            </p>
+          </div>
+        `
+            : ""
+        }
+        
         <form id="payment-form" class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-1">Quién paga</label>
-            <select name="fromId" required class="w-full p-2 border rounded">
+            <select name="fromContactId" required class="w-full p-2 border rounded">
               <option value="">Selecciona...</option>
               ${participants
-                .map(
-                  (p) => `
-                <option value="${p.id}">${p.name}</option>
-              `
-                )
+                .map((p) => {
+                  // If not admin, only show current user
+                  if (!isAdmin && p.id !== currentUserContact?.id) {
+                    return "";
+                  }
+                  return `
+                    <option value="${p.id}" ${
+                    p.id === currentUserContact?.id ? "selected" : ""
+                  }>
+                      ${p.displayName}${!p.hasAccount ? " (sin cuenta)" : ""}
+                    </option>
+                  `;
+                })
                 .join("")}
             </select>
           </div>
           
           <div>
             <label class="block text-sm font-medium mb-1">A quién paga</label>
-            <select name="toId" required class="w-full p-2 border rounded">
+            <select name="toContactId" required class="w-full p-2 border rounded">
               <option value="">Selecciona...</option>
               ${participants
                 .map(
                   (p) => `
-                <option value="${p.id}">${p.name}</option>
-              `
+                  <option value="${p.id}">
+                    ${p.displayName}${!p.hasAccount ? " (sin cuenta)" : ""}
+                  </option>
+                `
                 )
                 .join("")}
             </select>
@@ -86,7 +111,7 @@ export default function renderPaymentForm(
 }
 
 /**
- * Setup: Maneja el formulario de pagos
+ * Setup: Handle payment form
  */
 export function setupPaymentForm(
   form: HTMLFormElement,
@@ -95,7 +120,7 @@ export function setupPaymentForm(
 ): void {
   const cancelButton = form.querySelector<HTMLButtonElement>("#cancel-payment");
 
-  // Handler: Cancelar y volver al dashboard
+  // Handler: Cancel and go back to dashboard
   const handleCancel = () => {
     state.goToDashboard(store);
   };
@@ -103,5 +128,5 @@ export function setupPaymentForm(
   // Event listeners
   cancelButton?.addEventListener("click", handleCancel);
 
-  // El submit se maneja en main.ts con event delegation
+  // Submit is handled in main.ts with event delegation
 }

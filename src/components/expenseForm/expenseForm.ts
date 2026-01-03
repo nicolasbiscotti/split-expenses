@@ -2,28 +2,51 @@ import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 
 /**
- * Render: Formulario para agregar gastos
+ * Render: Form to add expenses
  */
 export default function renderExpenseForm(
   _state: AppState,
   store: AppStore
 ): string {
   const participants = store.getParticipants();
+  const currentUserContact = store.getCurrentUserContact();
+  const isAdmin = store.isCurrentUserAdmin();
 
   return `
     <div class="bg-white rounded-lg shadow p-6">
       <h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
+      
+      ${
+        !isAdmin
+          ? `
+        <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+          <p class="text-sm text-yellow-800">
+            Solo puedes registrar gastos propios. Contacta al administrador para registrar gastos de otros participantes.
+          </p>
+        </div>
+      `
+          : ""
+      }
+      
       <form id="expense-form" class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Quién pagó</label>
-          <select name="payerId" required class="w-full p-2 border rounded">
+          <select name="payerContactId" required class="w-full p-2 border rounded">
             <option value="">Selecciona...</option>
             ${participants
-              .map(
-                (p) => `
-              <option value="${p.id}">${p.name}</option>
-            `
-              )
+              .map((p) => {
+                // If not admin, only show current user
+                if (!isAdmin && p.id !== currentUserContact?.id) {
+                  return "";
+                }
+                return `
+                  <option value="${p.id}" ${
+                  p.id === currentUserContact?.id ? "selected" : ""
+                }>
+                    ${p.displayName}${!p.hasAccount ? " (sin cuenta)" : ""}
+                  </option>
+                `;
+              })
               .join("")}
           </select>
         </div>
@@ -73,9 +96,7 @@ export default function renderExpenseForm(
 }
 
 /**
- * Setup: Maneja el formulario de gastos
- * NOTA: Este setup se ejecuta desde el event delegation global en main.ts
- * Aquí documentamos el comportamiento esperado
+ * Setup: Handle expense form
  */
 export function setupExpenseForm(
   form: HTMLFormElement,
@@ -84,7 +105,7 @@ export function setupExpenseForm(
 ): void {
   const cancelButton = form.querySelector<HTMLButtonElement>("#cancel-expense");
 
-  // Handler: Cancelar y volver al dashboard
+  // Handler: Cancel and go back to dashboard
   const handleCancel = () => {
     state.goToDashboard(store);
   };
@@ -92,6 +113,5 @@ export function setupExpenseForm(
   // Event listeners
   cancelButton?.addEventListener("click", handleCancel);
 
-  // El submit se maneja en main.ts con event delegation
-  // porque necesita acceso al FormData
+  // Submit is handled in main.ts with event delegation
 }

@@ -2,37 +2,48 @@ import {
   expenseService,
   paymentService,
   sharedExpenseService,
+  type CreateSharedExpenseInput,
 } from "./services/databaseService";
 import { signInWithGoogle, signOut } from "./auth/authService";
 import { userService } from "./services/userService";
+import { globalContactService } from "./services/globalContactService";
+import { contactAliasService } from "./services/contactAliasService";
 import {
   getPendingInvitationsByEmail,
   acceptPendingInvitation,
 } from "./services/invitationService";
 import type AppState from "./state/AppState";
+import type { NewSharedExpenseData } from "./state/AppState";
 import type {
-  Participant,
   Expense,
   Payment,
   SharedExpense,
   ViewType,
   User,
-  Contact,
+  ResolvedContact,
+  GlobalContact,
 } from "./types";
-import { contactService } from "./services/contactServices";
-import type { NewSharedExpenseData } from "./state/AppState";
-import { participantService } from "./services/participantServices";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";
 
 export default class AppStore {
-  private participants: Participant[] = [];
+  // Current shared expense data
   private expenses: Expense[] = [];
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
-  private contacts: Contact[] = [];
+
+  // Current shared expense participants (resolved contacts)
+  private currentParticipants: ResolvedContact[] = [];
+
+  // User's contact list
+  private userContacts: ResolvedContact[] = [];
+
+  // Current user's own contact
+  private currentUserContact: ResolvedContact | null = null;
+
   private state: AppState;
+  private currentUser: User | null = null;
 
   constructor(state: AppState) {
     this.state = state;
@@ -42,18 +53,63 @@ export default class AppStore {
     this.loadFromStorage();
   }
 
-  // ==================== PARTICIPANTS ====================
-  getParticipants(): Participant[] {
-    return [...this.participants];
+  // ==================== CURRENT USER CONTACT ====================
+  getCurrentUserContact(): ResolvedContact | null {
+    return this.currentUserContact;
   }
 
-  getParticipantsByIds(ids: string[]): Participant[] {
-    return this.participants.filter((p) => ids.includes(p.id));
+  // ==================== CONTACTS ====================
+  /**
+   * Get user's contact list (resolved with aliases)
+   */
+  getContacts(): ResolvedContact[] {
+    return [...this.userContacts];
   }
 
-  // addParticipant(participant: Participant): void {
-  //   // Implementar si es necesario
-  // }
+  /**
+   * Get contacts by IDs
+   */
+  getContactsByIds(ids: string[]): ResolvedContact[] {
+    return this.userContacts.filter((c) => ids.includes(c.id));
+  }
+
+  /**
+   * Add a new contact
+   */
+  async addContact(
+    email: string,
+    displayName: string
+  ): Promise<ResolvedContact> {
+    if (!this.currentUser) {
+      throw new Error("User not logged in");
+    }
+
+    const newContact = await contactAliasService.createContactWithAlias(
+      this.currentUser.uid,
+      email,
+      displayName
+    );
+
+    // Add to local list
+    this.userContacts.push(newContact);
+
+    return newContact;
+  }
+
+  // ==================== PARTICIPANTS (for current shared expense) ====================
+  /**
+   * Get participants for current shared expense
+   */
+  getParticipants(): ResolvedContact[] {
+    return [...this.currentParticipants];
+  }
+
+  /**
+   * Get participant by contact ID
+   */
+  getParticipantById(contactId: string): ResolvedContact | undefined {
+    return this.currentParticipants.find((p) => p.id === contactId);
+  }
 
   // ==================== EXPENSES ====================
   getExpenses(): Expense[] {
@@ -154,65 +210,42 @@ export default class AppStore {
     return this.sharedExpenses.find((se) => se.id === id);
   }
 
-  async createSharedExpense(
-    sharedExpenseData: NewSharedExpenseData
-  ): Promise<string> {
+  async createSharedExpense(data: NewSharedExpenseData): Promise<string> {
     const user = this.getCurrentUser()!;
-    const currentUserId = user.uid;
 
-    const participantsToCreate: Omit<Participant, "id">[] =
-      sharedExpenseData.participants.map((p) => ({
-        name: p.name,
-        isAdmin: p.isAdmin,
-        contactId: p.contactId,
-        email: p.email,
-        appUserId: p.appUserId,
-      }));
-
-    const currentSharedExpenseData: Omit<SharedExpense, "id"> = {
-      name: sharedExpenseData.name,
-      description: sharedExpenseData.description,
-      type: sharedExpenseData.type,
-      status: "active",
-      totalAmount: 0,
-
-      createdAt: new Date().toISOString(),
-      createdBy: currentUserId,
-      administrators: [currentUserId],
-      participants: [currentUserId],
-
-      participantsPendingConfirmation: sharedExpenseData.participants
-        .filter((p) => p.appUserId !== currentUserId)
-        .map(
-          (p) => p.contactId || "pending participant added without contactId"
-        ),
-      participantContactIds: sharedExpenseData.participants.map(
-        (p) => p.contactId || "participant contactId added without contactId"
-      ),
-    };
-
-    const currentSharedExpense: SharedExpense = {
-      id: "",
-      ...currentSharedExpenseData,
+    const createInput: CreateSharedExpenseInput = {
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      participantContactIds: data.selectedContactIds,
+      adminContactIds: data.adminContactIds,
     };
 
     try {
-      if (user !== null) {
-        const sharedExpenseId = await sharedExpenseService.create(
-          { ...currentSharedExpenseData },
-          participantsToCreate,
-          user
-        );
+      const sharedExpenseId = await sharedExpenseService.create(
+        createInput,
+        user
+      );
 
-        currentSharedExpense.id = sharedExpenseId;
-        this.sharedExpenses.push(currentSharedExpense);
+      // Add to local list
+      const newSharedExpense: SharedExpense = {
+        id: sharedExpenseId,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        status: "active",
+        totalAmount: 0,
+        createdAt: new Date().toISOString(),
+        createdBy: user.uid,
+        adminContactIds: data.adminContactIds,
+        participantContactIds: data.selectedContactIds,
+        confirmedUserIds: [user.uid], // At minimum, creator is confirmed
+      };
 
-        console.log("Shared expense created with id ==> ", sharedExpenseId);
-        return sharedExpenseId;
-      }
+      this.sharedExpenses.push(newSharedExpense);
 
-      console.log("Shared could not be created without logged user ==>");
-      return "";
+      console.log("Shared expense created with id:", sharedExpenseId);
+      return sharedExpenseId;
     } catch (error) {
       console.error("Failed to create shared expense:", error);
       throw error;
@@ -229,7 +262,6 @@ export default class AppStore {
         ...this.sharedExpenses[index],
         ...updates,
       };
-      // TODO: Actualizar en Firebase también
       await sharedExpenseService.update(
         id,
         updates,
@@ -239,11 +271,10 @@ export default class AppStore {
   }
 
   async closeSharedExpense(id: string): Promise<void> {
-    this.updateSharedExpense(id, {
+    await this.updateSharedExpense(id, {
       status: "closed",
       closedAt: new Date().toISOString(),
     });
-    // TODO: Sincronizar con Firebase
   }
 
   // ==================== CURRENT SHARED EXPENSE ====================
@@ -255,53 +286,35 @@ export default class AppStore {
     this.currentSharedExpenseId = id;
 
     if (id) {
-      await this.loadCurredSharedExpenseDetails();
+      await this.loadCurrentSharedExpenseDetails();
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
+      this.currentParticipants = [];
+      this.expenses = [];
+      this.payments = [];
     }
   }
 
   private loadCachedCurrentExpenseId(): void {
     const cachedId = localStorage.getItem(CACHE_KEY_CURRENT_EXPENSE);
 
-    // Solo usar el cache si el gasto compartido existe
     if (cachedId && this.getSharedExpense(cachedId)) {
       this.currentSharedExpenseId = cachedId;
       console.log("Restored current expense from cache:", cachedId);
     } else {
-      // Si no existe, limpiar el cache
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     }
-  }
-
-  // ==================== CONTACTS ============================
-  getContacts(): Contact[] {
-    return [...this.contacts];
-  }
-
-  getContactsToBeParticipants(ids: string[]): Contact[] {
-    return this.contacts.filter((c) => ids.includes(c.id));
   }
 
   // ==================== LOAD FROM STORAGE ====================
   async loadFromStorage(): Promise<void> {
     try {
+      await this.loadUserData();
       this.loadCachedCurrentExpenseId();
-      await this.loadData();
-      if (this.contacts.length === 0) {
-        await contactService.createContactList(
-          this.getCurrentUser()?.uid || ""
-        );
-        await contactService.createContact(
-          {
-            name: this.getCurrentUser()?.displayName || "",
-            email: this.getCurrentUser()?.email || "",
-            appUserId: this.getCurrentUser()?.uid || null,
-          },
-          this.getCurrentUser()?.uid || ""
-        );
-        await this.loadData();
+
+      if (this.currentSharedExpenseId) {
+        await this.loadCurrentSharedExpenseDetails();
       }
     } catch (error) {
       console.error("Error loading data from Firebase:", error);
@@ -314,51 +327,104 @@ export default class AppStore {
     }
   }
 
-  private async loadData(): Promise<void> {
-    const [contacts, sharedExpenses] = await Promise.all([
-      contactService.getContacts(this.getCurrentUser()?.uid || ""),
-      sharedExpenseService.getAll(this.getCurrentUser()?.uid || ""),
-    ]);
+  /**
+   * Load user's data: contacts and shared expenses
+   */
+  private async loadUserData(): Promise<void> {
+    if (!this.currentUser) return;
 
-    this.contacts = contacts;
-    this.sharedExpenses = sharedExpenses;
+    const userId = this.currentUser.uid;
+    const userEmail = this.currentUser.email;
 
-    console.log("Data loaded:", {
-      contacts: contacts,
-      sharedExpenses: sharedExpenses,
+    // Ensure user has a global contact
+    let userGlobalContact = await globalContactService.getByUserId(userId);
+
+    if (!userGlobalContact) {
+      // Create global contact for user
+      userGlobalContact = await globalContactService.createForUser(
+        userEmail,
+        userId
+      );
+
+      // Create alias for self
+      await contactAliasService.setAlias(
+        userId,
+        userGlobalContact.id,
+        this.currentUser.displayName
+      );
+    }
+
+    // Resolve current user's contact
+    this.currentUserContact = await contactAliasService.resolveContact(
+      userId,
+      userGlobalContact
+    );
+
+    // Load user's contact list
+    this.userContacts = await contactAliasService.getUserContacts(userId);
+
+    // If user has no contacts, add themselves
+    if (this.userContacts.length === 0) {
+      this.userContacts = [this.currentUserContact];
+    } else if (
+      !this.userContacts.find((c) => c.id === this.currentUserContact!.id)
+    ) {
+      // Ensure self is in contact list
+      this.userContacts.unshift(this.currentUserContact);
+    }
+
+    // Load shared expenses
+    this.sharedExpenses = await sharedExpenseService.getAll(userId);
+
+    console.log("User data loaded:", {
+      contacts: this.userContacts,
+      sharedExpenses: this.sharedExpenses,
+      userContact: this.currentUserContact,
     });
   }
 
-  private async loadCurredSharedExpenseDetails() {
+  /**
+   * Load details for current shared expense
+   */
+  private async loadCurrentSharedExpenseDetails(): Promise<void> {
     const currentExpenseId = this.getCurrentSharedExpenseId();
     const sharedExpense = this.getSharedExpense(currentExpenseId!);
 
-    const [participants, expenses, payments] = await Promise.all([
-      participantService.getParticipants(sharedExpense!),
+    if (!sharedExpense || !this.currentUser) return;
+
+    // Load expenses and payments
+    const [expenses, payments] = await Promise.all([
       expenseService.getExpenses(
         currentExpenseId || "",
-        sharedExpense?.createdBy || ""
+        sharedExpense.createdBy
       ),
       paymentService.getPayments(
         currentExpenseId || "",
-        sharedExpense?.createdBy || ""
+        sharedExpense.createdBy
       ),
     ]);
 
     this.expenses = expenses;
     this.payments = payments;
-    this.participants = participants;
+
+    // Load participants (resolve global contacts with user's aliases)
+    const globalContacts = await globalContactService.getByIds(
+      sharedExpense.participantContactIds
+    );
+
+    this.currentParticipants = await contactAliasService.resolveContacts(
+      this.currentUser.uid,
+      globalContacts
+    );
 
     console.log("Shared Expense details loaded:", {
-      expenses: expenses,
-      payments: payments,
-      participants: participants,
+      expenses,
+      payments,
+      participants: this.currentParticipants,
     });
   }
 
-  private currentUser: User | null = null;
-
-  // Getter para usuario actual
+  // ==================== AUTH ====================
   getCurrentUser(): User | null {
     return this.currentUser;
   }
@@ -366,29 +432,39 @@ export default class AppStore {
   async setCurrentUser(user: User | null): Promise<void> {
     this.currentUser = user;
     if (user) {
-      // Procesar invitaciones pendientes
       await this.processPendingInvitations(user.email);
     }
   }
 
-  // Login
   async signInWithGoogle(): Promise<void> {
     const user = await signInWithGoogle();
     await userService.createOrUpdateUser(user);
     this.currentUser = user;
 
-    // Verificar invitaciones pendientes
+    // Link global contact to user (if exists)
+    const linkedContact = await globalContactService.linkToUser(
+      user.email,
+      user.uid
+    );
+
+    // If contact was linked, sync all shared expenses
+    if (linkedContact) {
+      await sharedExpenseService.syncConfirmedUser(linkedContact.id, user.uid);
+    }
+
     await this.processPendingInvitations(user.email);
   }
 
-  // Logout
   async signOut(): Promise<void> {
     await signOut();
     this.currentUser = null;
+    this.userContacts = [];
+    this.sharedExpenses = [];
+    this.currentSharedExpenseId = null;
+    this.currentUserContact = null;
     this.state.setCurrentView("login", this);
   }
 
-  // Procesar invitaciones pendientes
   private async processPendingInvitations(email: string): Promise<void> {
     const invitations = await getPendingInvitationsByEmail(email);
 
@@ -402,8 +478,18 @@ export default class AppStore {
     }
   }
 
-  // Obtener usuarios por UIDs (actualizado)
   async getUsersByIds(uids: string[]): Promise<User[]> {
     return await userService.getUsersByIds(uids);
+  }
+
+  /**
+   * Check if current user is admin of a shared expense
+   */
+  isCurrentUserAdmin(sharedExpense?: SharedExpense): boolean {
+    if (!this.currentUserContact) return false;
+    const se =
+      sharedExpense || this.getSharedExpense(this.currentSharedExpenseId!);
+    if (!se) return false;
+    return se.adminContactIds.includes(this.currentUserContact.id);
   }
 }

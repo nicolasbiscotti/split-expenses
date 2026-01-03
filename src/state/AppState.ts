@@ -1,12 +1,23 @@
-import type { ViewType, StepValue, Participant } from "../types";
+import type { ViewType, StepValue, ResolvedContact } from "../types";
 import type AppStore from "../store";
 
+/**
+ * Data structure for creating a new shared expense
+ * Now uses ResolvedContact instead of Participant
+ */
 export interface NewSharedExpenseData {
   name: string;
   description: string;
   type: "unique" | "recurring";
-  participantIds: string[];
-  participants: Participant[];
+
+  // Selected contacts (Global Contact IDs)
+  selectedContactIds: string[];
+
+  // Resolved contacts for display
+  selectedContacts: ResolvedContact[];
+
+  // Which contacts are admins (subset of selectedContactIds)
+  adminContactIds: string[];
 }
 
 type RenderFunction = (state: AppState, store: AppStore) => void;
@@ -18,8 +29,9 @@ export default class AppState {
     name: "",
     description: "",
     type: "unique",
-    participantIds: [],
-    participants: [],
+    selectedContactIds: [],
+    selectedContacts: [],
+    adminContactIds: [],
   };
   private renderFunctions: RenderFunction[] = [];
 
@@ -68,7 +80,6 @@ export default class AppState {
       ...this.newSharedExpenseData,
       ...updates,
     };
-    // NO notificamos aquí para evitar re-renders innecesarios en cada tecla
   }
 
   setNewSharedExpenseName(name: string): void {
@@ -83,39 +94,84 @@ export default class AppState {
     this.newSharedExpenseData.type = type;
   }
 
-  toggleParticipantInNew(contactId: string, store: AppStore): void {
-    const index = this.newSharedExpenseData.participantIds.indexOf(contactId);
+  /**
+   * Toggle a contact's selection for the new shared expense
+   */
+  toggleContactSelection(contact: ResolvedContact, store: AppStore): void {
+    const index = this.newSharedExpenseData.selectedContactIds.indexOf(
+      contact.id
+    );
+
     if (index === -1) {
-      this.newSharedExpenseData.participantIds.push(contactId);
-      this.newSharedExpenseData.participants = store
-        .getContacts()
-        .filter((c) => this.newSharedExpenseData.participantIds.includes(c.id))
-        .map((c) => ({
-          id: "",
-          name: c.name,
-          isAdmin: store.getCurrentUser()?.uid === c.appUserId,
-          contactId: c.id,
-          email: c.email,
-          appUserId: c.appUserId,
-        }));
+      // Add contact
+      this.newSharedExpenseData.selectedContactIds.push(contact.id);
+      this.newSharedExpenseData.selectedContacts.push(contact);
+
+      // If this is the current user, make them admin by default
+      const currentUser = store.getCurrentUser();
+      if (currentUser && contact.appUserId === currentUser.uid) {
+        if (!this.newSharedExpenseData.adminContactIds.includes(contact.id)) {
+          this.newSharedExpenseData.adminContactIds.push(contact.id);
+        }
+      }
     } else {
-      this.newSharedExpenseData.participantIds.splice(index, 1);
-      this.newSharedExpenseData.participants = store
-        .getContacts()
-        .filter((c) => this.newSharedExpenseData.participantIds.includes(c.id))
-        .map((c) => ({
-          id: "",
-          name: c.name,
-          isAdmin: store.getCurrentUser()?.uid === c.appUserId,
-          contactId: c.id,
-          email: c.email,
-          appUserId: c.appUserId,
-        }));
+      // Remove contact
+      this.newSharedExpenseData.selectedContactIds.splice(index, 1);
+      this.newSharedExpenseData.selectedContacts =
+        this.newSharedExpenseData.selectedContacts.filter(
+          (c) => c.id !== contact.id
+        );
+
+      // Also remove from admins if present
+      const adminIndex = this.newSharedExpenseData.adminContactIds.indexOf(
+        contact.id
+      );
+      if (adminIndex !== -1) {
+        this.newSharedExpenseData.adminContactIds.splice(adminIndex, 1);
+      }
     }
 
-    console.log("new Shared Expense Data ==> ", this.newSharedExpenseData);
+    this.notify(store);
+  }
 
-    this.notify(store); // Notificamos porque cambia la UI
+  /**
+   * Add a newly created contact to the selection
+   */
+  addNewContactToSelection(contact: ResolvedContact, store: AppStore): void {
+    if (!this.newSharedExpenseData.selectedContactIds.includes(contact.id)) {
+      this.newSharedExpenseData.selectedContactIds.push(contact.id);
+      this.newSharedExpenseData.selectedContacts.push(contact);
+    }
+    this.notify(store);
+  }
+
+  /**
+   * Toggle admin status for a selected contact
+   */
+  toggleAdminStatus(contactId: string, store: AppStore): void {
+    const index = this.newSharedExpenseData.adminContactIds.indexOf(contactId);
+
+    if (index === -1) {
+      this.newSharedExpenseData.adminContactIds.push(contactId);
+    } else {
+      this.newSharedExpenseData.adminContactIds.splice(index, 1);
+    }
+
+    this.notify(store);
+  }
+
+  /**
+   * Check if a contact is selected
+   */
+  isContactSelected(contactId: string): boolean {
+    return this.newSharedExpenseData.selectedContactIds.includes(contactId);
+  }
+
+  /**
+   * Check if a contact is an admin
+   */
+  isContactAdmin(contactId: string): boolean {
+    return this.newSharedExpenseData.adminContactIds.includes(contactId);
   }
 
   resetNewSharedExpenseData(): void {
@@ -123,8 +179,9 @@ export default class AppState {
       name: "",
       description: "",
       type: "unique",
-      participantIds: [],
-      participants: [],
+      selectedContactIds: [],
+      selectedContacts: [],
+      adminContactIds: [],
     };
     this.createStep = 1;
   }
@@ -135,16 +192,29 @@ export default class AppState {
   }
 
   canProceedToStep3(): boolean {
-    return this.newSharedExpenseData.participantIds.length >= 2;
+    return this.newSharedExpenseData.selectedContactIds.length >= 2;
   }
 
   isNewSharedExpenseValid(): boolean {
-    return this.canProceedToStep2() && this.canProceedToStep3();
+    return (
+      this.canProceedToStep2() &&
+      this.canProceedToStep3() &&
+      this.newSharedExpenseData.adminContactIds.length >= 1
+    );
   }
 
   // ==================== NAVIGATION HELPERS ====================
   startCreateFlow(store: AppStore): void {
     this.resetNewSharedExpenseData();
+
+    // Auto-select current user as participant and admin
+    const currentUserContact = store.getCurrentUserContact();
+    if (currentUserContact) {
+      this.newSharedExpenseData.selectedContactIds.push(currentUserContact.id);
+      this.newSharedExpenseData.selectedContacts.push(currentUserContact);
+      this.newSharedExpenseData.adminContactIds.push(currentUserContact.id);
+    }
+
     this.setCurrentView("create-step-1", store);
   }
 

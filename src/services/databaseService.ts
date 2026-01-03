@@ -12,19 +12,21 @@ import {
   runTransaction,
   collectionGroup,
   or,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 import type {
   Expense,
-  Participant,
   Payment,
   SharedExpense,
   User,
+  GlobalContact,
 } from "../types";
-import { participantService } from "./participantServices";
-import { inviteUserListByEmail } from "./invitationService";
+import { globalContactService } from "./globalContactService";
 
+// Collection paths
 const USERS_COLLECTION_NAME = "users";
 const PENDING_INVITATIONS_COLLECTION_NAME = "pendingInvitations";
 
@@ -38,29 +40,25 @@ export const PENDING_INVITATIONS_PATH = `environments/${
 
 const EXPENSES_COLLECTION_NAME = "expenses";
 const PAYMENTS_COLLECTION_NAME = "payments";
-
-export const PARTICIPANTS_COLLECTION_NAME = "participants";
 export const SHARED_EXPENSES_COLLECTION_NAME = "sharedExpenses";
-export const CONTACTS_COLLECTION_NAME = "contacts";
 
-// Expense Operations
+// ==================== EXPENSE OPERATIONS ====================
 
 function getExpensesPath(sharedExpenseId: string, uid: string) {
   return `${BASE_COLLECTION_PATH}/${uid}/${SHARED_EXPENSES_COLLECTION_NAME}/${sharedExpenseId}/${EXPENSES_COLLECTION_NAME}`;
 }
 
-async function getExpensesRef(collectionPath: string) {
+function getExpensesRef(collectionPath: string) {
   return collection(db, collectionPath);
 }
 
 export const expenseService = {
-  // Create new expense
   async createExpense(
     expense: Omit<Expense, "id">,
     uid: string
   ): Promise<string> {
     const collectionPath = getExpensesPath(expense.sharedExpenseId, uid);
-    const collectionRef = await getExpensesRef(collectionPath);
+    const collectionRef = getExpensesRef(collectionPath);
 
     let docRef;
 
@@ -73,31 +71,28 @@ export const expenseService = {
       const expenseList = await this.getExpenses(expense.sharedExpenseId, uid);
 
       let seTotalAmount = expenseList.reduce(
-        (total, expense) => total + expense.amount,
+        (total, exp) => total + exp.amount,
         0
       );
 
       await sharedExpenseService.update(
         expense.sharedExpenseId,
-        {
-          totalAmount: seTotalAmount,
-        },
+        { totalAmount: seTotalAmount },
         uid
       );
     });
 
-    console.log("Transaction successfully committed! ==> ");
+    console.log("Transaction successfully committed!");
     return docRef!.id;
   },
 
-  // Get all expenses
   async getExpenses(sharedExpenseId: string, uid: string): Promise<Expense[]> {
     if (sharedExpenseId === "") {
       return Promise.resolve([]);
     }
 
     const collectionPath = getExpensesPath(sharedExpenseId, uid);
-    const collectionRef = await getExpensesRef(collectionPath);
+    const collectionRef = getExpensesRef(collectionPath);
 
     const querySnapshot = await getDocs(
       query(collectionRef, orderBy("date", "desc"))
@@ -112,15 +107,14 @@ export const expenseService = {
     );
   },
 
-  // Get expenses by participant
-  async getExpensesByUser(
-    participantId: string,
+  async getExpensesByContact(
+    contactId: string,
     sharedExpenseId: string,
     uid: string
   ): Promise<Expense[]> {
     const q = query(
       collection(db, getExpensesPath(sharedExpenseId, uid)),
-      where("payerId", "==", participantId),
+      where("payerContactId", "==", contactId),
       orderBy("date", "desc")
     );
 
@@ -134,7 +128,6 @@ export const expenseService = {
     );
   },
 
-  // Update expense
   async updateExpense(
     id: string,
     updates: Partial<Omit<Expense, "id">>,
@@ -145,7 +138,6 @@ export const expenseService = {
     await updateDoc(docRef, updates);
   },
 
-  // Delete expense
   async deleteExpense(
     id: string,
     currentSharedExpenseId: string,
@@ -172,24 +164,20 @@ export const expenseService = {
 
       await sharedExpenseService.update(
         currentSharedExpenseId,
-        {
-          totalAmount: seTotalAmount,
-        },
+        { totalAmount: seTotalAmount },
         uid
       );
     });
   },
 };
 
-// --------------------------------------------------
-
-// Payment Operations
+// ==================== PAYMENT OPERATIONS ====================
 
 function getPaymentsPath(sharedExpenseId: string, uid: string) {
   return `${BASE_COLLECTION_PATH}/${uid}/${SHARED_EXPENSES_COLLECTION_NAME}/${sharedExpenseId}/${PAYMENTS_COLLECTION_NAME}`;
 }
 
-async function getPaymentsRef(collectionPath: string) {
+function getPaymentsRef(collectionPath: string) {
   return collection(db, collectionPath);
 }
 
@@ -198,7 +186,7 @@ export const paymentService = {
     payment: Omit<Payment, "id">,
     uid: string
   ): Promise<string> {
-    const paymentsCollectionRef = await getPaymentsRef(
+    const paymentsCollectionRef = getPaymentsRef(
       getPaymentsPath(payment.sharedExpenseId, uid)
     );
 
@@ -215,7 +203,7 @@ export const paymentService = {
       return Promise.resolve([]);
     }
 
-    const paymentsCollectionRef = await getPaymentsRef(
+    const paymentsCollectionRef = getPaymentsRef(
       getPaymentsPath(sharedExpenseId, uid)
     );
 
@@ -232,16 +220,16 @@ export const paymentService = {
     );
   },
 
-  async getPaymentsBetweenUsers(
-    user1Id: string,
-    user2Id: string,
+  async getPaymentsBetweenContacts(
+    contact1Id: string,
+    contact2Id: string,
     sharedExpenseId: string,
     uid: string
   ): Promise<Payment[]> {
     const q = query(
       collection(db, getPaymentsPath(sharedExpenseId, uid)),
-      where("fromId", "in", [user1Id, user2Id]),
-      where("toId", "in", [user1Id, user2Id])
+      where("fromContactId", "in", [contact1Id, contact2Id]),
+      where("toContactId", "in", [contact1Id, contact2Id])
     );
 
     const querySnapshot = await getDocs(q);
@@ -268,9 +256,7 @@ export const paymentService = {
   },
 };
 
-// --------------------------------------------------
-
-// Shared Expenses Operation
+// ==================== SHARED EXPENSE OPERATIONS ====================
 
 export function getSharedExpensesPath(uid: string) {
   return `${BASE_COLLECTION_PATH}/${uid}/${SHARED_EXPENSES_COLLECTION_NAME}`;
@@ -280,74 +266,113 @@ function getSharedExpensesRef(collectionPath: string) {
   return collection(db, collectionPath);
 }
 
+/**
+ * Input data for creating a shared expense
+ */
+export interface CreateSharedExpenseInput {
+  name: string;
+  description: string;
+  type: "unique" | "recurring";
+  participantContactIds: string[]; // Global Contact IDs
+  adminContactIds: string[]; // Global Contact IDs (subset of participants)
+}
+
 export const sharedExpenseService = {
+  /**
+   * Create a new shared expense
+   * No longer creates a participants subcollection - everything is in the document
+   */
   create: async (
-    data: Omit<SharedExpense, "id">,
-    participants: Omit<Participant, "id">[],
+    data: CreateSharedExpenseInput,
     createdBy: User
   ): Promise<string> => {
     const uid = createdBy.uid;
-
     const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
 
-    let sharedExpenseDocRef;
-    await runTransaction(db, async () => {
-      sharedExpenseDocRef = await addDoc(collectionRef, data);
+    // Get the global contacts to find which ones have accounts
+    const contacts = await globalContactService.getByIds(
+      data.participantContactIds
+    );
+    const confirmedUserIds = contacts
+      .filter((c) => c.appUserId !== null)
+      .map((c) => c.appUserId as string);
 
-      await participantService.createParticipantList(
-        sharedExpenseDocRef.id,
-        participants,
-        uid
-      );
+    const sharedExpenseData: Omit<SharedExpense, "id"> = {
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      status: "active",
+      totalAmount: 0,
+      createdAt: new Date().toISOString(),
+      createdBy: uid,
 
-      let toInviteList = participants.map((p) => ({
-        email: p.email || "",
-        isAdmin: p.isAdmin,
-        contactId: p.contactId || "",
-      }));
+      // Access control using Global Contact IDs
+      adminContactIds: data.adminContactIds,
+      participantContactIds: data.participantContactIds,
 
-      await inviteUserListByEmail(
-        toInviteList,
-        { id: sharedExpenseDocRef.id, ...data },
-        createdBy
-      );
+      // User IDs for Firestore rules (only those who have accounts)
+      confirmedUserIds: confirmedUserIds,
+    };
+
+    const docRef = await addDoc(collectionRef, {
+      ...sharedExpenseData,
+      createdAt: Timestamp.now(),
     });
 
-    return sharedExpenseDocRef!.id;
+    return docRef.id;
   },
 
+  /**
+   * Get all shared expenses where user is a participant
+   * Uses collection group query to search across all users
+   */
   getAll: async (uid: string): Promise<SharedExpense[]> => {
-    // 1. Reference the Collection Group (searches all collections named 'sharedExpenses')
+    // First, get the user's global contact
+    const userContact = await globalContactService.getByUserId(uid);
+
+    if (!userContact) {
+      // User doesn't have a contact yet, return empty
+      return [];
+    }
+
+    // Query all shared expenses where this contact is a participant
     const expensesGroupRef = collectionGroup(
       db,
       SHARED_EXPENSES_COLLECTION_NAME
     );
 
-    // 2. Build the query with an OR condition
     const q = query(
       expensesGroupRef,
-      // Filter by Environment to avoid data leaks across environments
-      // where("environmentId", "==", currentEnvId),
-      // The OR condition: Is Admin OR Is Participant
       or(
-        where("administrators", "array-contains", uid),
-        where("participants", "array-contains", uid)
+        // User is in confirmedUserIds (has account and is confirmed)
+        where("confirmedUserIds", "array-contains", uid),
+        // Or user's contact is in participantContactIds
+        where("participantContactIds", "array-contains", userContact.id)
       )
     );
 
-    // 3. Execute
     const querySnapshot = await getDocs(q);
-    // querySnapshot.forEach((doc) => {
-    //   console.log(doc.id, " => ", doc.data());
-    // });
 
-    // const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
-    // const snapshot = await getDocs(collectionRef);
     return querySnapshot.docs.map(
       (doc) => ({ id: doc.id, ...doc.data() } as SharedExpense)
     );
   },
 
+  /**
+   * Get shared expenses owned by a user
+   */
+  getOwned: async (uid: string): Promise<SharedExpense[]> => {
+    const collectionRef = getSharedExpensesRef(getSharedExpensesPath(uid));
+    const snapshot = await getDocs(collectionRef);
+
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() } as SharedExpense)
+    );
+  },
+
+  /**
+   * Update a shared expense
+   */
   update: async (
     id: string,
     updates: Partial<SharedExpense>,
@@ -355,6 +380,86 @@ export const sharedExpenseService = {
   ): Promise<void> => {
     await updateDoc(doc(db, getSharedExpensesPath(uid), id), updates);
   },
-};
 
-// --------------------------------------------------
+  /**
+   * Add a participant to a shared expense
+   */
+  addParticipant: async (
+    sharedExpenseId: string,
+    globalContactId: string,
+    isAdmin: boolean,
+    ownerUid: string
+  ): Promise<void> => {
+    const docRef = doc(db, getSharedExpensesPath(ownerUid), sharedExpenseId);
+
+    const updateData: any = {
+      participantContactIds: arrayUnion(globalContactId),
+    };
+
+    if (isAdmin) {
+      updateData.adminContactIds = arrayUnion(globalContactId);
+    }
+
+    // Check if this contact has an account
+    const contact = await globalContactService.getById(globalContactId);
+    if (contact?.appUserId) {
+      updateData.confirmedUserIds = arrayUnion(contact.appUserId);
+    }
+
+    await updateDoc(docRef, updateData);
+  },
+
+  /**
+   * Remove a participant from a shared expense
+   */
+  removeParticipant: async (
+    sharedExpenseId: string,
+    globalContactId: string,
+    ownerUid: string
+  ): Promise<void> => {
+    const contact = await globalContactService.getById(globalContactId);
+
+    const docRef = doc(db, getSharedExpensesPath(ownerUid), sharedExpenseId);
+
+    const updateData: any = {
+      participantContactIds: arrayRemove(globalContactId),
+      adminContactIds: arrayRemove(globalContactId),
+    };
+
+    if (contact?.appUserId) {
+      updateData.confirmedUserIds = arrayRemove(contact.appUserId);
+    }
+
+    await updateDoc(docRef, updateData);
+  },
+
+  /**
+   * Sync confirmedUserIds when a contact gets an account
+   * Call this when a user creates an account to update all shared expenses they're in
+   */
+  syncConfirmedUser: async (
+    globalContactId: string,
+    userId: string
+  ): Promise<void> => {
+    // Find all shared expenses where this contact is a participant
+    const expensesGroupRef = collectionGroup(
+      db,
+      SHARED_EXPENSES_COLLECTION_NAME
+    );
+    const q = query(
+      expensesGroupRef,
+      where("participantContactIds", "array-contains", globalContactId)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Update each to add the userId to confirmedUserIds
+    const updatePromises = querySnapshot.docs.map((docSnap) => {
+      return updateDoc(docSnap.ref, {
+        confirmedUserIds: arrayUnion(userId),
+      });
+    });
+
+    await Promise.all(updatePromises);
+  },
+};

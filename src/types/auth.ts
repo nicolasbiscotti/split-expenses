@@ -16,13 +16,15 @@ export interface User {
 export type UserRole = "administrator" | "participant";
 
 /**
- * Invitación pendiente
+ * Invitación pendiente (UPDATED)
+ * Now references globalContactId instead of pendingContactId
  */
 export interface PendingInvitation {
   id: string;
   email: string;
-  pendingContactId: string;
+  globalContactId: string; // Reference to GlobalContact (was pendingContactId)
   sharedExpenseId: string;
+  sharedExpenseOwnerId: string; // Owner's UID to locate the SharedExpense
   sharedExpenseName: string;
   invitedBy: string;
   invitedByName: string;

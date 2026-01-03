@@ -1,12 +1,12 @@
-import type { Debt, Participant } from "../../types";
+import type { Debt, ResolvedContact } from "../../types";
 
 /**
- * Render: Lista de deudas sugeridas para saldar
- * Este es un componente compartido usado por dashboard y paymentForm
+ * Render: List of suggested debts to settle
+ * This is a shared component used by dashboard and paymentForm
  */
 export default function renderDebtList(
   debts: Debt[],
-  participants: Participant[]
+  participants: ResolvedContact[]
 ): string {
   if (debts.length === 0) {
     return "";
@@ -23,17 +23,27 @@ export default function renderDebtList(
 }
 
 /**
- * Render: Item individual de deuda
+ * Render: Individual debt item
  */
-function renderDebtItem(debt: Debt, participants: Participant[]): string {
-  const from = participants.find((p) => p.id === debt.fromId);
-  const to = participants.find((p) => p.id === debt.toId);
+function renderDebtItem(debt: Debt, participants: ResolvedContact[]): string {
+  const from = participants.find((p) => p.id === debt.fromContactId);
+  const to = participants.find((p) => p.id === debt.toContactId);
 
   return `
     <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded">
-      <span class="font-medium">${from?.name || "Desconocido"}</span>
+      <div class="flex items-center gap-1">
+        <span class="font-medium">${from?.displayName || "Desconocido"}</span>
+        ${
+          !from?.hasAccount
+            ? '<span class="text-xs text-gray-500">*</span>'
+            : ""
+        }
+      </div>
       <span class="text-gray-600">→</span>
-      <span class="font-medium">${to?.name || "Desconocido"}</span>
+      <div class="flex items-center gap-1">
+        <span class="font-medium">${to?.displayName || "Desconocido"}</span>
+        ${!to?.hasAccount ? '<span class="text-xs text-gray-500">*</span>' : ""}
+      </div>
       <span class="ml-auto font-bold text-yellow-700">
         $${debt.amount.toFixed(2)}
       </span>
