@@ -9,6 +9,7 @@ export default function renderUserProfile(
   store: AppStore
 ): string {
   const user = store.getCurrentUser();
+  const currentUserContact = store.getCurrentUserContact();
 
   if (!user) {
     return '<div class="p-4 text-center">No se encontró el usuario</div>';
@@ -16,12 +17,12 @@ export default function renderUserProfile(
 
   const sharedExpenses = store.getSharedExpenses();
   const asAdmin = sharedExpenses.filter((se) =>
-    se.administrators.includes(user.uid)
+    se.adminContactIds.includes(currentUserContact!.id)
   );
   const asParticipant = sharedExpenses.filter(
     (se) =>
-      se.participants.includes(user.uid) &&
-      !se.administrators.includes(user.uid)
+      se.participantContactIds.includes(currentUserContact!.id) &&
+      !se.adminContactIds.includes(currentUserContact!.id)
   );
 
   return `
@@ -115,14 +116,16 @@ export default function renderUserProfile(
               ${sharedExpenses
                 .filter((se) => se.status === "active")
                 .map((se) => {
-                  const isAdmin = se.administrators.includes(user.uid);
+                  const isAdmin = se.adminContactIds.includes(
+                    currentUserContact!.id
+                  );
                   return `
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 transition cursor-pointer"
                          onclick="selectSharedExpense('${se.id}')">
                       <div>
                         <p class="font-medium">${se.name}</p>
                         <p class="text-xs text-gray-500">${
-                          se.participants.length
+                          se.participantContactIds.length
                         } participantes</p>
                       </div>
                       <span class="px-2 py-1 text-xs rounded ${
