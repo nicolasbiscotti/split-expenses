@@ -11,6 +11,20 @@ export default function renderExpenseForm(
   const participants = store.getParticipants();
   const currentUserContact = store.getCurrentUserContact();
   const isAdmin = store.isCurrentUserAdmin();
+  const currentSharedExpense = store.getSharedExpense(
+    store.getCurrentSharedExpenseId()!
+  );
+  const isClosed = currentSharedExpense?.status === "closed";
+
+  if (isClosed) {
+    return `
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <div class="text-4xl mb-4">🔒</div>
+        <h3 class="text-lg font-semibold text-yellow-800 mb-2">Gasto Compartido Cerrado</h3>
+        <p class="text-yellow-700">No se pueden agregar más gastos a este gasto compartido.</p>
+      </div>
+    `;
+  }
 
   return `
     <div class="bg-white rounded-lg shadow p-6">
@@ -52,16 +66,19 @@ export default function renderExpenseForm(
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-1">Monto</label>
-          <input 
-            type="number" 
-            name="amount" 
-            step="0.01" 
-            min="0.01"
-            required 
-            class="w-full p-2 border rounded" 
-            placeholder="0.00"
-          >
+          <label class="block text-sm font-medium mb-1">Monto (ARS)</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+            <input 
+              type="number" 
+              name="amount" 
+              step="0.01" 
+              min="0.01"
+              required 
+              class="w-full p-2 pl-8 border rounded" 
+              placeholder="0,00"
+            >
+          </div>
         </div>
         
         <div>

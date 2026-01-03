@@ -19,6 +19,11 @@ import renderDashboard, {
   setupDashboard,
 } from "./components/dashboard/dashboard";
 
+// Shared Expense Header
+import renderSharedExpenseHeader, {
+  setupSharedExpenseHeader,
+} from "./components/sharedExpenseHeader/sharedExpenseHeader";
+
 // Forms
 import renderExpenseForm, {
   setupExpenseForm,
@@ -52,6 +57,16 @@ import renderCreateStep3, {
 } from "./components/createSteps/createStep3";
 
 /**
+ * Views that should show the shared expense header
+ */
+const VIEWS_WITH_HEADER = [
+  "dashboard",
+  "add-expense",
+  "add-payment",
+  "history",
+];
+
+/**
  * Función principal de renderizado
  * Se ejecuta cada vez que cambia el estado
  */
@@ -72,13 +87,23 @@ export default function render(state: AppState, store: AppStore): void {
     currentView !== "user-profile" &&
     !currentView.startsWith("create");
 
+  // Determinar si mostrar el header del shared expense
+  const showSharedExpenseHeader =
+    VIEWS_WITH_HEADER.includes(currentView) && currentSharedExpense;
+
   // Renderizar el HTML
   app.innerHTML = `
     <!-- Top Navigation Bar -->
     ${renderMainTopNavBar(state, store)}
 
     <!-- Main Content -->
-    <div id="app-main-container" class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
+    <div id="app-main-container" class="max-w-lg mx-auto ${
+      needsBottomPadding ? "p-4 pb-20" : "p-4"
+    }">
+      <!-- Shared Expense Header (for dashboard views) -->
+      ${showSharedExpenseHeader ? renderSharedExpenseHeader(state, store) : ""}
+      
+      <!-- View Content -->
       ${renderViewContent(currentView, state, store)}
     </div>
 
@@ -149,6 +174,11 @@ function setupViewInteractions(
   // Setup del Top NavBar (siempre, excepto en login)
   if (view !== "login") {
     setupMainTopNavBar(app, state, store);
+  }
+
+  // Setup del Shared Expense Header (para vistas con header)
+  if (VIEWS_WITH_HEADER.includes(view)) {
+    setupSharedExpenseHeader(app, state, store);
   }
 
   // Setup específico de cada vista
