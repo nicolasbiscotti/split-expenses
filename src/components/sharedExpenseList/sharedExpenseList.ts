@@ -1,6 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpense } from "../../types";
+import { formatCurrency } from "../../util/currency";
 
 /**
  * Render: Lista de gastos compartidos o estado vacío
@@ -53,7 +54,7 @@ function renderEmptyState(): string {
 /**
  * Render de la lista con gastos
  */
-function renderList(sharedExpenses: any[], store: AppStore): string {
+function renderList(sharedExpenses: SharedExpense[], store: AppStore): string {
   return `
     <header class="mb-6">
       
@@ -116,13 +117,13 @@ function renderSharedExpenseCard(
       
       <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
         <span>👥 ${numberOfParticipants} participantes</span>
-        <span class="font-semibold text-blue-600">$${totalAmount.toFixed(
-          2
+        <span class="font-semibold text-blue-600">${formatCurrency(
+          totalAmount
         )}</span>
       </div>
       
       <div class="text-xs text-gray-500 mt-2">
-        Creado: ${new Date(sharedExpense.createdAt).toLocaleDateString()}
+        Creado: ${new Date(sharedExpense.createdAt).toLocaleDateString("es-AR")}
       </div>
     </div>
   `;
@@ -142,11 +143,6 @@ export function setupSharedExpenseList(
   const createNewButton = container.querySelector("#create-new-shared-expense");
   const list = container.querySelector("#shared-expense-list");
 
-  console.log("setup shared expense list ==> ", container);
-  console.log("setup shared expense list ==> ", createFirstButton);
-  console.log("setup shared expense list ==> ", createNewButton);
-  console.log("setup shared expense list ==> ", list);
-
   // Handler: Iniciar flujo de creación
   const handleStartCreate = () => {
     state.startCreateFlow(store);
@@ -164,14 +160,10 @@ export function setupSharedExpenseList(
 
   // Event delegation para las tarjetas
   list?.addEventListener("click", (e) => {
-    console.log("Card Clicked ==> ");
-
     const card = (e.target as HTMLElement).closest(".shared-expense-card");
     if (card) {
-      console.log("Card ==> ", card);
       const expenseId = card.getAttribute("data-expense-id");
       if (expenseId) {
-        console.log("expense id ==> ", expenseId);
         handleSelectSharedExpense(expenseId);
       }
     }

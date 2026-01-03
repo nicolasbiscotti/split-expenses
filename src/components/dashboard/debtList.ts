@@ -1,4 +1,5 @@
 import type { Debt, ResolvedContact } from "../../types";
+import { formatCurrency } from "../../util/currency";
 
 /**
  * Render: List of suggested debts to settle
@@ -45,7 +46,7 @@ function renderDebtItem(debt: Debt, participants: ResolvedContact[]): string {
         ${!to?.hasAccount ? '<span class="text-xs text-gray-500">*</span>' : ""}
       </div>
       <span class="ml-auto font-bold text-yellow-700">
-        $${debt.amount.toFixed(2)}
+        ${formatCurrency(debt.amount)}
       </span>
     </div>
   `;

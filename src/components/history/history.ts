@@ -1,6 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { Expense, Payment, ResolvedContact } from "../../types";
+import { formatCurrency } from "../../util/currency";
 
 /**
  * Render: History of expenses and payments
@@ -62,11 +63,11 @@ function renderExpenseItem(
         <p class="text-sm text-gray-600">
           ${payer?.displayName || "Desconocido"}${
     !payer?.hasAccount ? " *" : ""
-  } · ${new Date(expense.date).toLocaleDateString()}
+  } · ${new Date(expense.date).toLocaleDateString("es-AR")}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="font-bold">$${expense.amount.toFixed(2)}</span>
+        <span class="font-bold">${formatCurrency(expense.amount)}</span>
         <button 
           class="delete-expense-btn text-red-600 text-sm hover:text-red-800"
           data-expense-id="${expense.id}"
@@ -123,12 +124,12 @@ function renderPaymentItem(
   } → ${to?.displayName || "Desconocido"}${!to?.hasAccount ? " *" : ""}
         </p>
         <p class="text-sm text-gray-600">
-          ${new Date(payment.date).toLocaleDateString()}
+          ${new Date(payment.date).toLocaleDateString("es-AR")}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="font-bold text-green-600">$${payment.amount.toFixed(
-          2
+        <span class="font-bold text-green-600">${formatCurrency(
+          payment.amount
         )}</span>
         <button 
           class="delete-payment-btn text-red-600 text-sm hover:text-red-800"
