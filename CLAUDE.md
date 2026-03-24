@@ -60,6 +60,10 @@ View-based routing via `ViewType` enum — no URL routing. Navigate with `state.
 
 Balance and debt simplification logic lives in `src/util/calculations.ts`. The debt simplification algorithm minimizes the number of transfers needed to settle all balances.
 
+## Language Convention
+
+Code and comments must be in English. The UI (user-facing strings in HTML templates) must be in Spanish. Migrate existing Spanish comments to English as files are modified.
+
 ## TypeScript Conventions
 
 - Unused variables/parameters must be prefixed with `_` (enforced by tsconfig)
