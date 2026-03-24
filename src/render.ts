@@ -19,6 +19,7 @@ import renderHistory, { setupHistory } from "./components/history/history";
 
 // Navigation
 import bottomNavBar from "./components/menus/bottomNavBar";
+import sharedExpenseTopBar from "./components/menus/sharedExpenseTopBar";
 
 // Shared Expense List
 import renderSharedExpenseList, {
@@ -52,17 +53,20 @@ export default function render(state: AppState, store: AppStore): void {
     : null;
   const currentView = state.getCurrentView();
 
-  // Determinar si necesita padding bottom para la navegación
-  const needsBottomPadding =
+  // Determine padding needs based on fixed bars
+  const needsBottomNav =
     currentView !== "shared-expense-list" && !currentView.startsWith("create");
+  const needsTopBar = needsBottomNav;
 
-  // Renderizar el HTML
+  // Render HTML
   app.innerHTML = `
-    <div class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
+    ${needsTopBar ? sharedExpenseTopBar(currentSharedExpense) : ""}
+
+    <div class="max-w-lg mx-auto ${needsBottomNav ? "p-4 pt-16 pb-20" : "p-4"}">
       ${renderViewContent(currentView, state, store)}
     </div>
 
-    ${needsBottomPadding ? bottomNavBar(state, currentSharedExpense) : ""}
+    ${needsBottomNav ? bottomNavBar(state, currentSharedExpense) : ""}
   `;
 
   // Ejecutar setup functions después del render

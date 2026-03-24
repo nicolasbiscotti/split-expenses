@@ -1,5 +1,6 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import { formatCurrency, formatDate } from "../../util/format";
 
 /**
  * Render: Lista de gastos compartidos o estado vacío
@@ -113,13 +114,11 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
       
       <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
         <span>👥 ${participants.length} participantes</span>
-        <span class="font-semibold text-blue-600">$${totalAmount.toFixed(
-          2
-        )}</span>
+        <span class="font-semibold text-blue-600">${formatCurrency(totalAmount)}</span>
       </div>
       
       <div class="text-xs text-gray-500 mt-2">
-        Creado: ${new Date(sharedExpense.createdAt).toLocaleDateString()}
+        Creado: ${formatDate(sharedExpense.createdAt)}
       </div>
     </div>
   `;
