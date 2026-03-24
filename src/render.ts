@@ -19,6 +19,7 @@ import renderHistory, { setupHistory } from "./components/history/history";
 
 // Navigation
 import bottomNavBar from "./components/menus/bottomNavBar";
+import sharedExpenseTopBar from "./components/menus/sharedExpenseTopBar";
 
 // Shared Expense List
 import renderSharedExpenseList, {
@@ -39,8 +40,8 @@ import renderCreateStep3, {
 } from "./components/createSteps/createStep3";
 
 /**
- * Función principal de renderizado
- * Se ejecuta cada vez que cambia el estado
+ * Main render function.
+ * Called on every state or store change.
  */
 export default function render(state: AppState, store: AppStore): void {
   const app = document.getElementById("app");
@@ -52,25 +53,28 @@ export default function render(state: AppState, store: AppStore): void {
     : null;
   const currentView = state.getCurrentView();
 
-  // Determinar si necesita padding bottom para la navegación
-  const needsBottomPadding =
+  // Determine padding needs based on fixed bars
+  const needsBottomNav =
     currentView !== "shared-expense-list" && !currentView.startsWith("create");
+  const needsTopBar = needsBottomNav;
 
-  // Renderizar el HTML
+  // Render HTML
   app.innerHTML = `
-    <div class="max-w-lg mx-auto ${needsBottomPadding ? "p-4 pb-20" : "p-4"}">
+    ${needsTopBar ? sharedExpenseTopBar(currentSharedExpense) : ""}
+
+    <div id="view-content" class="max-w-lg mx-auto ${needsBottomNav ? "p-4 pt-16 pb-20" : "p-4"}">
       ${renderViewContent(currentView, state, store)}
     </div>
 
-    ${needsBottomPadding ? bottomNavBar(state, currentSharedExpense) : ""}
+    ${needsBottomNav ? bottomNavBar(state, currentSharedExpense) : ""}
   `;
 
-  // Ejecutar setup functions después del render
+  // Run setup functions after render
   setupViewInteractions(currentView, state, store);
 }
 
 /**
- * Renderiza el contenido de la vista actual
+ * Renders the HTML content for the current view.
  */
 function renderViewContent(
   view: string,
@@ -108,8 +112,7 @@ function renderViewContent(
 }
 
 /**
- * Configura las interacciones de la vista actual
- * Aquí es donde llamamos a los setup functions
+ * Calls the setup() function for the current view to attach event listeners.
  */
 function setupViewInteractions(
   view: string,
@@ -121,7 +124,7 @@ function setupViewInteractions(
 
   switch (view) {
     case "shared-expense-list": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupSharedExpenseList(container, state, store);
       }
@@ -137,7 +140,7 @@ function setupViewInteractions(
     }
 
     case "create-step-2": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupCreateStep2(container, state, store);
       }
@@ -145,7 +148,7 @@ function setupViewInteractions(
     }
 
     case "create-step-3": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupCreateStep3(container, state, store);
       }
@@ -153,7 +156,7 @@ function setupViewInteractions(
     }
 
     case "dashboard": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupDashboard(container, state, store);
       }
@@ -177,7 +180,7 @@ function setupViewInteractions(
     }
 
     case "history": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupHistory(container, state, store);
       }
@@ -185,7 +188,6 @@ function setupViewInteractions(
     }
 
     default:
-      // Vistas que no necesitan setup específico
       break;
   }
 }

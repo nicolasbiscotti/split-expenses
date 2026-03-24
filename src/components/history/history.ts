@@ -2,6 +2,7 @@
 
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import { formatCurrency, formatDate } from "../../util/format";
 
 /**
  * Render: Historial de gastos y pagos
@@ -55,13 +56,11 @@ function renderExpenseItem(expense: any, participants: any[]): string {
       <div>
         <p class="font-medium">${expense.description}</p>
         <p class="text-sm text-gray-600">
-          ${payer?.name || "Desconocido"} · ${new Date(
-    expense.date
-  ).toLocaleDateString()}
+          ${payer?.name || "Desconocido"} · ${formatDate(expense.date)}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="font-bold">$${expense.amount.toFixed(2)}</span>
+        <span class="font-bold">${formatCurrency(expense.amount)}</span>
         <button 
           class="delete-expense-btn text-red-600 text-sm hover:text-red-800"
           data-expense-id="${expense.id}"
@@ -110,13 +109,11 @@ function renderPaymentItem(payment: any, participants: any[]): string {
           ${from?.name || "Desconocido"} → ${to?.name || "Desconocido"}
         </p>
         <p class="text-sm text-gray-600">
-          ${new Date(payment.date).toLocaleDateString()}
+          ${formatDate(payment.date)}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="font-bold text-green-600">$${payment.amount.toFixed(
-          2
-        )}</span>
+        <span class="font-bold text-green-600">${formatCurrency(payment.amount)}</span>
         <button 
           class="delete-payment-btn text-red-600 text-sm hover:text-red-800"
           data-payment-id="${payment.id}"
@@ -138,47 +135,49 @@ export function setupHistory(
   store: AppStore
 ): void {
   // Handler: Eliminar gasto
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = async (id: string, btn: HTMLButtonElement) => {
     if (confirm("¿Eliminar este gasto?")) {
+      btn.disabled = true;
+      btn.textContent = "⏳";
       try {
         await store.deleteExpense(id, "history");
-        // El store ya notificó y re-renderizó
       } catch (error) {
+        btn.disabled = false;
+        btn.textContent = "🗑️";
         alert("Error al eliminar el gasto");
       }
     }
   };
 
   // Handler: Eliminar pago
-  const handleDeletePayment = async (id: string) => {
+  const handleDeletePayment = async (id: string, btn: HTMLButtonElement) => {
     if (confirm("¿Eliminar este pago?")) {
+      btn.disabled = true;
+      btn.textContent = "⏳";
       try {
         await store.deletePayment(id, "history");
-        // El store ya notificó y re-renderizó
       } catch (error) {
+        btn.disabled = false;
+        btn.textContent = "🗑️";
         alert("Error al eliminar el pago");
       }
     }
   };
 
   // Event delegation para botones de eliminar
+  // Use closest() to handle clicks on child nodes of the button (e.g. emoji text)
   container.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!btn) return;
 
-    // Eliminar gasto
-    if (target.classList.contains("delete-expense-btn")) {
-      const expenseId = target.dataset.expenseId;
-      if (expenseId) {
-        handleDeleteExpense(expenseId);
-      }
+    if (btn.classList.contains("delete-expense-btn")) {
+      const expenseId = btn.dataset.expenseId;
+      if (expenseId) handleDeleteExpense(expenseId, btn);
     }
 
-    // Eliminar pago
-    if (target.classList.contains("delete-payment-btn")) {
-      const paymentId = target.dataset.paymentId;
-      if (paymentId) {
-        handleDeletePayment(paymentId);
-      }
+    if (btn.classList.contains("delete-payment-btn")) {
+      const paymentId = btn.dataset.paymentId;
+      if (paymentId) handleDeletePayment(paymentId, btn);
     }
   });
 }

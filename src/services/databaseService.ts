@@ -103,7 +103,6 @@ export const expenseService = {
       });
     });
 
-    console.log("Transaction successfully committed! ==> ");
     return docRef!.id;
   },
 
@@ -283,7 +282,7 @@ export const sharedExpenseService = {
 
   getAll: async (): Promise<SharedExpense[]> => {
     const collectionRef = await getSharedExpensesCollectionRef();
-    const snapshot = await getDocs(collectionRef);
+    const snapshot = await getDocs(query(collectionRef, orderBy("createdAt", "desc")));
     return snapshot.docs.map(
       (doc) => ({ id: doc.id, ...doc.data() } as SharedExpense)
     );

@@ -1,4 +1,5 @@
 import type { Debt, Participant } from "../../types";
+import { formatCurrency } from "../../util/format";
 
 /**
  * Render: Lista de deudas sugeridas para saldar
@@ -35,7 +36,7 @@ function renderDebtItem(debt: Debt, participants: Participant[]): string {
       <span class="text-gray-600">→</span>
       <span class="font-medium">${to?.name || "Desconocido"}</span>
       <span class="ml-auto font-bold text-yellow-700">
-        $${debt.amount.toFixed(2)}
+        ${formatCurrency(debt.amount)}
       </span>
     </div>
   `;

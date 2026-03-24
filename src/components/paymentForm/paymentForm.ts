@@ -1,7 +1,9 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import type { Payment } from "../../types";
 import { calculateBalances, calculateDebts } from "../../util/calculations";
 import renderDebtList from "../dashboard/debtList";
+import { showToast } from "../../util/toast";
 
 /**
  * Render: Formulario para registrar pagos + sugerencias de deudas
@@ -94,14 +96,51 @@ export function setupPaymentForm(
   store: AppStore
 ): void {
   const cancelButton = form.querySelector<HTMLButtonElement>("#cancel-payment");
+  const submitButton = form.querySelector<HTMLButtonElement>('[type="submit"]');
 
-  // Handler: Cancelar y volver al dashboard
-  const handleCancel = () => {
-    state.goToDashboard(store);
-  };
+  cancelButton?.addEventListener("click", () => state.goToDashboard(store));
 
-  // Event listeners
-  cancelButton?.addEventListener("click", handleCancel);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  // El submit se maneja en main.ts con event delegation
+    const currentSharedExpenseId = store.getCurrentSharedExpenseId();
+    if (!currentSharedExpenseId) {
+      alert("No hay un gasto compartido seleccionado");
+      return;
+    }
+
+    const formData = new FormData(form);
+    const fromId = formData.get("fromId") as string;
+    const toId = formData.get("toId") as string;
+
+    if (fromId === toId) {
+      alert("No puedes registrar un pago a la misma persona");
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Guardando...";
+    }
+
+    try {
+      await store.addPayment(
+        {
+          sharedExpenseId: currentSharedExpenseId,
+          fromId,
+          toId,
+          amount: parseFloat(formData.get("amount") as string),
+          date: new Date().toISOString(),
+        } as Payment,
+        "dashboard"
+      );
+      showToast("Pago registrado");
+    } catch (_error) {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Guardar";
+      }
+      alert("Error al registrar el pago");
+    }
+  });
 }

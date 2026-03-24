@@ -1,6 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import { calculateBalances, calculateDebts } from "../../util/calculations";
+import { formatCurrency } from "../../util/format";
 import renderDebtList from "./debtList";
 
 /**
@@ -33,7 +34,7 @@ function renderTotalSummary(total: number, count: number): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold mb-2">Resumen Total</h2>
-      <p class="text-3xl font-bold text-blue-600">$${total.toFixed(2)}</p>
+      <p class="text-3xl font-bold text-blue-600">${formatCurrency(total)}</p>
       <p class="text-sm text-gray-600">${count} gasto${
     count !== 1 ? "s" : ""
   } registrado${count !== 1 ? "s" : ""}</p>
@@ -77,7 +78,7 @@ function renderBalanceItem(balance: any, participants: any[]): string {
           ? "text-red-600"
           : "text-gray-600"
       }">
-        ${isPositive ? "+" : ""}$${balance.balance.toFixed(2)}
+        ${isPositive ? "+" : ""}${formatCurrency(balance.balance)}
       </span>
     </div>
   `;

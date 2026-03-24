@@ -1,5 +1,6 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import { formatCurrency, formatDate } from "../../util/format";
 
 /**
  * Render: Lista de gastos compartidos o estado vacío
@@ -113,13 +114,11 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
       
       <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
         <span>👥 ${participants.length} participantes</span>
-        <span class="font-semibold text-blue-600">$${totalAmount.toFixed(
-          2
-        )}</span>
+        <span class="font-semibold text-blue-600">${formatCurrency(totalAmount)}</span>
       </div>
       
       <div class="text-xs text-gray-500 mt-2">
-        Creado: ${new Date(sharedExpense.createdAt).toLocaleDateString()}
+        Creado: ${formatDate(sharedExpense.createdAt)}
       </div>
     </div>
   `;
@@ -145,7 +144,11 @@ export function setupSharedExpenseList(
   };
 
   // Handler: Seleccionar un gasto compartido
-  const handleSelectSharedExpense = async (id: string) => {
+  const handleSelectSharedExpense = async (
+    id: string,
+    cardEl: HTMLElement
+  ) => {
+    cardEl.classList.add("opacity-50", "pointer-events-none");
     await store.setCurrentSharedExpenseId(id);
     state.goToDashboard(store);
   };
@@ -156,16 +159,12 @@ export function setupSharedExpenseList(
 
   // Event delegation para las tarjetas
   list?.addEventListener("click", (e) => {
-    console.log("Card Clicked ==> ");
-
-    const card = (e.target as HTMLElement).closest(".shared-expense-card");
+    const card = (e.target as HTMLElement).closest<HTMLElement>(
+      ".shared-expense-card"
+    );
     if (card) {
-      console.log("Card ==> ", card);
       const expenseId = card.getAttribute("data-expense-id");
-      if (expenseId) {
-        console.log("expense id ==> ", expenseId);
-        handleSelectSharedExpense(expenseId);
-      }
+      if (expenseId) handleSelectSharedExpense(expenseId, card);
     }
   });
 }
