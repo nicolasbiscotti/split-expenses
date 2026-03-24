@@ -51,3 +51,7 @@ Configuring Firebase for local development primarily involves using the Firebase
         }
 
     By following these steps, you establish a local development environment for your Firebase project, enabling faster iteration, safer testing, and reduced costs associated with cloud usage during development.
+
+## Auto-detection in this project
+
+This app automatically connects to the Firebase emulators when running on `localhost` — the check `location.hostname === "localhost"` is already in `src/firebase/firebase.ts`. You do **not** need to set `VITE_USE_FIREBASE_EMULATORS=true` when developing locally; emulator mode is enabled automatically. The env variable is only needed to force emulator use on a non-localhost host (e.g., a staging deploy).

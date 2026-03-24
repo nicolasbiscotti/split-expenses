@@ -18,7 +18,7 @@ Copy `.env.example` to `.env` and fill in Firebase credentials. Key variables:
 - `VITE_FIRESTORE_DATA_ID` — namespace for Firestore data
 - `VITE_USE_FIREBASE_EMULATORS` — set to `true` to use local emulator (auto-detected on localhost)
 
-See `technical-references-docs/configure_firebase_for_local_development.md` for emulator setup.
+See `docs/guides/firebase-local-dev.md` for emulator setup.
 
 ## Architecture
 
@@ -72,4 +72,4 @@ Code and comments must be in English. The UI (user-facing strings in HTML templa
 
 ## Reference Docs
 
-`technical-references-docs/` contains architecture guides, component pattern examples (10 patterns), and environment variable handling — consult these before adding new patterns.
+`docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, and custom events — consult these before adding new patterns.

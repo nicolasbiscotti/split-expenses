@@ -12,29 +12,14 @@ const store = new AppStore(state);
 declare global {
   interface Window {
     setView: (view: ViewType) => void;
-    deleteExpense: (id: string) => void;
-    deletePayment: (id: string) => void;
   }
 }
 
+// Used by bottomNavBar and sharedExpenseTopBar via inline onclick
 window.setView = (view) => {
   state.setCurrentView(view, store);
 };
 
-// NOTA: Estas funciones ahora están en setupHistory
-// pero las mantenemos aquí para compatibilidad con onclick inline
-window.deleteExpense = (id: string) => {
-  if (confirm("¿Eliminar este gasto?")) {
-    store.deleteExpense(id, "history");
-  }
-};
-
-window.deletePayment = (id: string) => {
-  if (confirm("¿Eliminar este pago?")) {
-    store.deletePayment(id, "history");
-  }
-};
-
 // ==================== START APP ====================
 state.subscribeRender(render);
-// NO llamar render() aquí, loadFromStorage() lo hará
+// Do not call render() here — loadFromStorage() triggers the first render

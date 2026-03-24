@@ -40,8 +40,8 @@ import renderCreateStep3, {
 } from "./components/createSteps/createStep3";
 
 /**
- * Función principal de renderizado
- * Se ejecuta cada vez que cambia el estado
+ * Main render function.
+ * Called on every state or store change.
  */
 export default function render(state: AppState, store: AppStore): void {
   const app = document.getElementById("app");
@@ -69,12 +69,12 @@ export default function render(state: AppState, store: AppStore): void {
     ${needsBottomNav ? bottomNavBar(state, currentSharedExpense) : ""}
   `;
 
-  // Ejecutar setup functions después del render
+  // Run setup functions after render
   setupViewInteractions(currentView, state, store);
 }
 
 /**
- * Renderiza el contenido de la vista actual
+ * Renders the HTML content for the current view.
  */
 function renderViewContent(
   view: string,
@@ -112,8 +112,7 @@ function renderViewContent(
 }
 
 /**
- * Configura las interacciones de la vista actual
- * Aquí es donde llamamos a los setup functions
+ * Calls the setup() function for the current view to attach event listeners.
  */
 function setupViewInteractions(
   view: string,
@@ -189,7 +188,6 @@ function setupViewInteractions(
     }
 
     default:
-      // Vistas que no necesitan setup específico
       break;
   }
 }

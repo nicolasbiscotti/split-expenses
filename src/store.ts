@@ -2,7 +2,7 @@ import {
   expenseService,
   participantService,
   paymentService,
-  sharedExpenseService, // Necesitas crear este servicio
+  sharedExpenseService,
 } from "./services/databaseService";
 import type AppState from "./state/AppState";
 import type {
@@ -37,10 +37,6 @@ export default class AppStore {
     return this.participants.filter((p) => ids.includes(p.id));
   }
 
-  // addParticipant(participant: Participant): void {
-  //   // Implementar si es necesario
-  // }
-
   // ==================== EXPENSES ====================
   getExpenses(): Expense[] {
     return [...this.expenses];
@@ -55,7 +51,6 @@ export default class AppStore {
       const expenseId = await expenseService.createExpense(expense);
       expense.id = expenseId;
       this.expenses.push(expense);
-      console.log("Expense created with id:", expenseId);
     } catch (error) {
       console.error("Failed to create expense:", error);
       throw error;
@@ -68,7 +63,6 @@ export default class AppStore {
     try {
       await expenseService.deleteExpense(id, this.currentSharedExpenseId || "");
       this.expenses = this.expenses.filter((e) => e.id !== id);
-      console.log("Expense deleted:", id);
     } catch (error) {
       console.error("Failed to delete expense:", error);
       throw error;
@@ -91,7 +85,6 @@ export default class AppStore {
       const paymentId = await paymentService.createPayment(payment);
       payment.id = paymentId;
       this.payments.push(payment);
-      console.log("Payment created with id:", paymentId);
     } catch (error) {
       console.error("Failed to create payment:", error);
       throw error;
@@ -104,7 +97,6 @@ export default class AppStore {
     try {
       await paymentService.deletePayment(id, this.currentSharedExpenseId || "");
       this.payments = this.payments.filter((p) => p.id !== id);
-      console.log("Payment deleted:", id);
     } catch (error) {
       console.error("Failed to delete payment:", error);
       throw error;
@@ -136,7 +128,6 @@ export default class AppStore {
       sharedExpense.id = sharedExpenseId;
       this.sharedExpenses.push(sharedExpense);
       await this.setCurrentSharedExpenseId(sharedExpenseId);
-      console.log("Shared expense created with id:", sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {
       console.error("Failed to create shared expense:", error);
@@ -154,17 +145,15 @@ export default class AppStore {
         ...this.sharedExpenses[index],
         ...updates,
       };
-      // TODO: Actualizar en Firebase también
       await sharedExpenseService.update(id, updates);
     }
   }
 
   async closeSharedExpense(id: string): Promise<void> {
-    this.updateSharedExpense(id, {
+    await this.updateSharedExpense(id, {
       status: "closed",
       closedAt: new Date().toISOString(),
     });
-    // TODO: Sincronizar con Firebase
   }
 
   // ==================== CURRENT SHARED EXPENSE ====================
@@ -186,12 +175,11 @@ export default class AppStore {
   private loadCachedCurrentExpenseId(): void {
     const cachedId = localStorage.getItem(CACHE_KEY_CURRENT_EXPENSE);
 
-    // Solo usar el cache si el gasto compartido existe
+    // Only use the cache if the shared expense still exists
     if (cachedId && this.getSharedExpense(cachedId)) {
       this.currentSharedExpenseId = cachedId;
-      console.log("Restored current expense from cache:", cachedId);
     } else {
-      // Si no existe, limpiar el cache
+      // Stale cache — clear it
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     }
   }
@@ -222,21 +210,12 @@ export default class AppStore {
         expenseService.getExpenses(this.currentSharedExpenseId || ""),
         paymentService.getPayments(this.currentSharedExpenseId || ""),
         participantService.getParticipants(),
-        sharedExpenseService.getAll(), // Necesitas implementar este servicio
+        sharedExpenseService.getAll(),
       ]);
 
     this.expenses = expenses;
     this.payments = payments;
     this.participants = participants;
     this.sharedExpenses = sharedExpenses;
-
-    console.log("Data loaded:", {
-      expenses: expenses.length,
-      payments: payments.length,
-      participants: participants.length,
-      sharedExpenses: sharedExpenses.length,
-    });
-
-    console.log("Shared Expenses loaded:", sharedExpenses);
   }
 }

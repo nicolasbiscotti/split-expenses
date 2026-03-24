@@ -95,7 +95,7 @@ export default function renderCreateStep3(
 }
 
 /**
- * Setup: Maneja la creación del shared expense
+ * Setup: handles shared expense creation
  */
 export function setupCreateStep3(
   container: HTMLElement,
@@ -117,7 +117,7 @@ export function setupCreateStep3(
   const handleCreate = async () => {
     if (!createButton) return;
 
-    // Mostrar loading
+    // Show loading state
     createButton.disabled = true;
     buttonText?.classList.add("hidden");
     buttonLoading?.classList.remove("hidden");
@@ -125,14 +125,14 @@ export function setupCreateStep3(
     try {
       const data = state.getNewSharedExpenseData();
 
-      // Validación final
+      // Final validation
       if (!state.isNewSharedExpenseValid()) {
-        throw new Error("Datos inválidos");
+        throw new Error("Invalid data");
       }
 
-      // Crear el objeto SharedExpense
+      // Build SharedExpense object
       const newSharedExpense: SharedExpense = {
-        id: "", // Firebase generará el ID
+        id: "", // Firebase will generate the ID
         name: data.name,
         description: data.description,
         type: data.type,
@@ -142,22 +142,20 @@ export function setupCreateStep3(
         createdAt: new Date().toISOString(),
       };
 
-      // Guardar en la base de datos
-      // NOTA: Debes implementar createSharedExpense en AppStore
       await store.createSharedExpense(newSharedExpense);
 
-      // Limpiar datos temporales
+      // Clear wizard state
       state.resetNewSharedExpenseData();
 
-      // Ir al dashboard del nuevo gasto
+      // Navigate to the new expense dashboard
       state.goToDashboard(store);
     } catch (error) {
-      console.error("Error al crear gasto compartido:", error);
+      console.error("Failed to create shared expense:", error);
       alert(
         "Hubo un error al crear el gasto compartido. Por favor intenta de nuevo."
       );
 
-      // Restaurar botón
+      // Restore button
       createButton.disabled = false;
       buttonText?.classList.remove("hidden");
       buttonLoading?.classList.add("hidden");
