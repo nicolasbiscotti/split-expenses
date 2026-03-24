@@ -103,7 +103,6 @@ export const expenseService = {
       });
     });
 
-    console.log("Transaction successfully committed! ==> ");
     return docRef!.id;
   },
 

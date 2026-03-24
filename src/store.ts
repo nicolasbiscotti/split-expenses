@@ -51,6 +51,7 @@ export default class AppStore {
       const expenseId = await expenseService.createExpense(expense);
       expense.id = expenseId;
       this.expenses.push(expense);
+      await this.syncSharedExpenseTotal(expense.sharedExpenseId);
     } catch (error) {
       console.error("Failed to create expense:", error);
       throw error;
@@ -60,15 +61,24 @@ export default class AppStore {
   }
 
   async deleteExpense(id: string, currentView: ViewType): Promise<void> {
+    const sharedExpenseId = this.currentSharedExpenseId || "";
     try {
-      await expenseService.deleteExpense(id, this.currentSharedExpenseId || "");
+      await expenseService.deleteExpense(id, sharedExpenseId);
       this.expenses = this.expenses.filter((e) => e.id !== id);
+      await this.syncSharedExpenseTotal(sharedExpenseId);
     } catch (error) {
       console.error("Failed to delete expense:", error);
       throw error;
     } finally {
       this.state.setCurrentView(currentView, this);
     }
+  }
+
+  private async syncSharedExpenseTotal(sharedExpenseId: string): Promise<void> {
+    const newTotal = this.expenses
+      .filter((e) => e.sharedExpenseId === sharedExpenseId)
+      .reduce((sum, e) => sum + e.amount, 0);
+    await this.updateSharedExpense(sharedExpenseId, { totalAmount: newTotal });
   }
 
   // ==================== PAYMENTS ====================
