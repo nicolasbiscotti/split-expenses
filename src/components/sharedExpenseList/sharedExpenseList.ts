@@ -144,7 +144,11 @@ export function setupSharedExpenseList(
   };
 
   // Handler: Seleccionar un gasto compartido
-  const handleSelectSharedExpense = async (id: string) => {
+  const handleSelectSharedExpense = async (
+    id: string,
+    cardEl: HTMLElement
+  ) => {
+    cardEl.classList.add("opacity-50", "pointer-events-none");
     await store.setCurrentSharedExpenseId(id);
     state.goToDashboard(store);
   };
@@ -155,16 +159,12 @@ export function setupSharedExpenseList(
 
   // Event delegation para las tarjetas
   list?.addEventListener("click", (e) => {
-    console.log("Card Clicked ==> ");
-
-    const card = (e.target as HTMLElement).closest(".shared-expense-card");
+    const card = (e.target as HTMLElement).closest<HTMLElement>(
+      ".shared-expense-card"
+    );
     if (card) {
-      console.log("Card ==> ", card);
       const expenseId = card.getAttribute("data-expense-id");
-      if (expenseId) {
-        console.log("expense id ==> ", expenseId);
-        handleSelectSharedExpense(expenseId);
-      }
+      if (expenseId) handleSelectSharedExpense(expenseId, card);
     }
   });
 }

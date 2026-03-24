@@ -3,6 +3,7 @@ import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
 import type { Expense, Payment, ViewType } from "./types";
+import { showToast } from "./util/toast";
 
 // ==================== INIT ====================
 const state = new AppState();
@@ -50,6 +51,12 @@ document.addEventListener("submit", async (e) => {
       return;
     }
 
+    const submitBtn = form.querySelector<HTMLButtonElement>('[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Guardando...";
+    }
+
     try {
       await store.addExpense(
         {
@@ -61,7 +68,12 @@ document.addEventListener("submit", async (e) => {
         } as Expense,
         "dashboard"
       );
+      showToast("Gasto guardado");
     } catch (error) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Guardar";
+      }
       alert("Error al agregar el gasto");
     }
   }
@@ -83,6 +95,12 @@ document.addEventListener("submit", async (e) => {
       return;
     }
 
+    const submitBtn = form.querySelector<HTMLButtonElement>('[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Guardando...";
+    }
+
     try {
       await store.addPayment(
         {
@@ -94,7 +112,12 @@ document.addEventListener("submit", async (e) => {
         } as Payment,
         "dashboard"
       );
+      showToast("Pago registrado");
     } catch (error) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Guardar";
+      }
       alert("Error al registrar el pago");
     }
   }

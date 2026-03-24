@@ -62,7 +62,7 @@ export default function render(state: AppState, store: AppStore): void {
   app.innerHTML = `
     ${needsTopBar ? sharedExpenseTopBar(currentSharedExpense) : ""}
 
-    <div class="max-w-lg mx-auto ${needsBottomNav ? "p-4 pt-16 pb-20" : "p-4"}">
+    <div id="view-content" class="max-w-lg mx-auto ${needsBottomNav ? "p-4 pt-16 pb-20" : "p-4"}">
       ${renderViewContent(currentView, state, store)}
     </div>
 
@@ -125,7 +125,7 @@ function setupViewInteractions(
 
   switch (view) {
     case "shared-expense-list": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupSharedExpenseList(container, state, store);
       }
@@ -141,7 +141,7 @@ function setupViewInteractions(
     }
 
     case "create-step-2": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupCreateStep2(container, state, store);
       }
@@ -149,7 +149,7 @@ function setupViewInteractions(
     }
 
     case "create-step-3": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupCreateStep3(container, state, store);
       }
@@ -157,7 +157,7 @@ function setupViewInteractions(
     }
 
     case "dashboard": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupDashboard(container, state, store);
       }
@@ -181,7 +181,7 @@ function setupViewInteractions(
     }
 
     case "history": {
-      const container = app.querySelector<HTMLElement>(".max-w-lg");
+      const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupHistory(container, state, store);
       }
