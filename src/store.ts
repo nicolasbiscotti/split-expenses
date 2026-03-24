@@ -135,7 +135,7 @@ export default class AppStore {
       });
       sharedExpense.id = sharedExpenseId;
       this.sharedExpenses.push(sharedExpense);
-      this.setCurrentSharedExpenseId(sharedExpenseId);
+      await this.setCurrentSharedExpenseId(sharedExpenseId);
       console.log("Shared expense created with id:", sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {

@@ -1,5 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import type { Expense } from "../../types";
+import { showToast } from "../../util/toast";
 
 /**
  * Render: Formulario para agregar gastos
@@ -74,8 +76,6 @@ export default function renderExpenseForm(
 
 /**
  * Setup: Maneja el formulario de gastos
- * NOTA: Este setup se ejecuta desde el event delegation global en main.ts
- * Aquí documentamos el comportamiento esperado
  */
 export function setupExpenseForm(
   form: HTMLFormElement,
@@ -83,15 +83,43 @@ export function setupExpenseForm(
   store: AppStore
 ): void {
   const cancelButton = form.querySelector<HTMLButtonElement>("#cancel-expense");
+  const submitButton = form.querySelector<HTMLButtonElement>('[type="submit"]');
 
-  // Handler: Cancelar y volver al dashboard
-  const handleCancel = () => {
-    state.goToDashboard(store);
-  };
+  cancelButton?.addEventListener("click", () => state.goToDashboard(store));
 
-  // Event listeners
-  cancelButton?.addEventListener("click", handleCancel);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  // El submit se maneja en main.ts con event delegation
-  // porque necesita acceso al FormData
+    const currentSharedExpenseId = store.getCurrentSharedExpenseId();
+    if (!currentSharedExpenseId) {
+      alert("No hay un gasto compartido seleccionado");
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Guardando...";
+    }
+
+    const formData = new FormData(form);
+    try {
+      await store.addExpense(
+        {
+          sharedExpenseId: currentSharedExpenseId,
+          payerId: formData.get("payerId") as string,
+          amount: parseFloat(formData.get("amount") as string),
+          description: formData.get("description") as string,
+          date: new Date().toISOString(),
+        } as Expense,
+        "dashboard"
+      );
+      showToast("Gasto guardado");
+    } catch (_error) {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Guardar";
+      }
+      alert("Error al agregar el gasto");
+    }
+  });
 }

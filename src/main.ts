@@ -2,8 +2,7 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
-import type { Expense, Payment, ViewType } from "./types";
-import { showToast } from "./util/toast";
+import type { ViewType } from "./types";
 
 // ==================== INIT ====================
 const state = new AppState();
@@ -35,93 +34,6 @@ window.deletePayment = (id: string) => {
     store.deletePayment(id, "history");
   }
 };
-
-// ==================== FORM SUBMISSIONS ====================
-document.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const form = e.target as HTMLFormElement;
-
-  // Expense Form
-  if (form.id === "expense-form") {
-    const formData = new FormData(form);
-    const currentExpenseId = store.getCurrentSharedExpenseId();
-
-    if (!currentExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
-      return;
-    }
-
-    const submitBtn = form.querySelector<HTMLButtonElement>('[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Guardando...";
-    }
-
-    try {
-      await store.addExpense(
-        {
-          sharedExpenseId: currentExpenseId,
-          payerId: formData.get("payerId") as string,
-          amount: parseFloat(formData.get("amount") as string),
-          description: formData.get("description") as string,
-          date: new Date().toISOString(),
-        } as Expense,
-        "dashboard"
-      );
-      showToast("Gasto guardado");
-    } catch (error) {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Guardar";
-      }
-      alert("Error al agregar el gasto");
-    }
-  }
-
-  // Payment Form
-  if (form.id === "payment-form") {
-    const formData = new FormData(form);
-    const fromId = formData.get("fromId") as string;
-    const toId = formData.get("toId") as string;
-    const currentExpenseId = store.getCurrentSharedExpenseId();
-
-    if (!currentExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
-      return;
-    }
-
-    if (fromId === toId) {
-      alert("No puedes registrar un pago a la misma persona");
-      return;
-    }
-
-    const submitBtn = form.querySelector<HTMLButtonElement>('[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Guardando...";
-    }
-
-    try {
-      await store.addPayment(
-        {
-          sharedExpenseId: currentExpenseId,
-          fromId,
-          toId,
-          amount: parseFloat(formData.get("amount") as string),
-          date: new Date().toISOString(),
-        } as Payment,
-        "dashboard"
-      );
-      showToast("Pago registrado");
-    } catch (error) {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Guardar";
-      }
-      alert("Error al registrar el pago");
-    }
-  }
-});
 
 // ==================== START APP ====================
 state.subscribeRender(render);
