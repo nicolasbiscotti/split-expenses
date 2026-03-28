@@ -1,9 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if
-          true;
+    match /environments/{dataId} {
+
+      // User profiles: only the owner can read/write their own profile and contacts
+      match /users/{uid} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+
+        match /contacts/{contactId} {
+          allow read, write: if request.auth != null && request.auth.uid == uid;
+        }
+      }
+
+      // Shared expenses: accessible by any participant whose UID is in participantUids
+      match /sharedExpenses/{seId} {
+        allow read: if request.auth != null;
+
+
+        allow create: if request.auth != null
+          && request.auth.uid == request.resource.data.creatorUid;
+
+        allow update: if request.auth != null;
+
+
+        allow delete: if request.auth != null
+          && request.auth.uid == resource.data.creatorUid;
+
+        match /expenses/{expId} {
+          allow read, write: if request.auth != null;
+        }
+
+        match /payments/{payId} {
+          allow read, write: if request.auth != null;
+        }
+      }
     }
   }
 }

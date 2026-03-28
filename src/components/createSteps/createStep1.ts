@@ -128,12 +128,10 @@ export function setupCreateStep1(
 
     const formData = new FormData(form);
 
-    // Actualizar todos los datos del formulario
-    state.updateNewSharedExpenseData({
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      type: formData.get("type") as "unique" | "recurring",
-    });
+    // Update all form fields
+    state.setNewSharedExpenseName(formData.get("name") as string);
+    state.setNewSharedExpenseDescription(formData.get("description") as string);
+    state.setNewSharedExpenseType(formData.get("type") as "unique" | "recurring");
 
     // Validar y avanzar
     if (state.canProceedToStep2()) {

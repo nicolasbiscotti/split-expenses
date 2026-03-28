@@ -1,17 +1,19 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import type { SharedExpenseParticipant } from "../../types";
 import { calculateBalances, calculateDebts } from "../../util/calculations";
 import { formatCurrency } from "../../util/format";
 import renderDebtList from "./debtList";
 
 /**
- * Render: Dashboard principal con resumen y balances
+ * Render: Main dashboard with summary and balances
  */
 export default function renderDashboard(
   _state: AppState,
   store: AppStore
 ): string {
-  const participants = store.getParticipants();
+  const currentId = store.getCurrentSharedExpenseId() ?? "";
+  const participants = store.getParticipantsForSharedExpense(currentId);
   const expenses = store.getExpenses();
   const payments = store.getPayments();
   const balances = calculateBalances(participants, expenses, payments);
@@ -28,7 +30,7 @@ export default function renderDashboard(
 }
 
 /**
- * Render: Resumen total de gastos
+ * Render: Total expense summary
  */
 function renderTotalSummary(total: number, count: number): string {
   return `
@@ -43,9 +45,9 @@ function renderTotalSummary(total: number, count: number): string {
 }
 
 /**
- * Render: Lista de balances por persona
+ * Render: Balance list per person
  */
-function renderBalancesList(balances: any[], participants: any[]): string {
+function renderBalancesList(balances: any[], participants: SharedExpenseParticipant[]): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold mb-3">Balance por Persona</h2>
@@ -59,10 +61,13 @@ function renderBalancesList(balances: any[], participants: any[]): string {
 }
 
 /**
- * Render: Item individual de balance
+ * Render: Single balance item
  */
-function renderBalanceItem(balance: any, participants: any[]): string {
-  const participant = participants.find((p) => p.id === balance.participantId);
+function renderBalanceItem(balance: any, participants: SharedExpenseParticipant[]): string {
+  const participant = participants.find((p) => p.email === balance.email);
+  const name = participant
+    ? (participant.displayName !== participant.email ? participant.displayName : participant.email)
+    : balance.email;
   const isPositive = balance.balance > 0.01;
   const isNegative = balance.balance < -0.01;
 
@@ -70,7 +75,7 @@ function renderBalanceItem(balance: any, participants: any[]): string {
     <div class="flex justify-between items-center p-2 rounded ${
       isPositive ? "bg-green-50" : isNegative ? "bg-red-50" : "bg-gray-50"
     }">
-      <span class="font-medium">${participant?.name || "Desconocido"}</span>
+      <span class="font-medium">${name}</span>
       <span class="font-bold ${
         isPositive
           ? "text-green-600"
@@ -85,16 +90,10 @@ function renderBalanceItem(balance: any, participants: any[]): string {
 }
 
 /**
- * Setup: Dashboard generalmente no necesita interacciones
- * Todo se maneja a través de la navegación del bottomNavBar
+ * Setup: Dashboard is read-only; actions are handled via the bottom nav bar
  */
 export function setupDashboard(
   _container: HTMLElement,
   _state: AppState,
   _store: AppStore
-): void {
-  // El dashboard es principalmente de lectura
-  // Las acciones (agregar gasto, pago) se manejan desde el navbar
-  // Si en el futuro necesitas botones interactivos en el dashboard,
-  // agrégalos aquí
-}
+): void {}

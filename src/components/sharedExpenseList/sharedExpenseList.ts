@@ -10,58 +10,67 @@ export default function renderSharedExpenseList(
   store: AppStore
 ): string {
   const sharedExpenses = store.getSharedExpenses();
+  const user = store.getCurrentUser();
+
+  const avatarHtml = user?.photoURL
+    ? `<img src="${user.photoURL}" alt="Perfil" class="w-9 h-9 rounded-full object-cover">`
+    : `<div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
+        ${(user?.displayName ?? "U")[0].toUpperCase()}
+       </div>`;
 
   if (sharedExpenses.length === 0) {
-    return renderEmptyState();
+    return renderEmptyState(avatarHtml);
   }
 
-  return renderList(sharedExpenses, store);
+  return renderList(sharedExpenses, store, avatarHtml);
 }
 
-/**
- * Render del estado vacío
- */
-function renderEmptyState(): string {
+function renderEmptyState(avatarHtml: string): string {
   return `
-    <div class="flex flex-col items-center justify-center min-h-screen -mt-20">
-      <div class="text-center mb-8">
-        <div class="text-6xl mb-4">💰</div>
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">SplitExpenses</h1>
-        <p class="text-gray-600 mb-8">Aún no tienes gastos compartidos</p>
-      </div>
-      
-      <div class="bg-white rounded-lg shadow-lg p-6 max-w-sm">
-        <h3 class="font-semibold text-lg mb-3">¿Cómo funciona?</h3>
-        <ul class="space-y-2 text-sm text-gray-600 mb-6">
-          <li>✓ Crea un gasto compartido</li>
-          <li>✓ Agrega participantes</li>
-          <li>✓ Registra gastos y pagos</li>
-          <li>✓ Divide las cuentas automáticamente</li>
-        </ul>
-        
-        <button 
-          id="create-first-shared-expense" 
-          class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
-        >
-          Crear Primer Gasto Compartido
-        </button>
+    <div class="flex flex-col min-h-screen -mt-4">
+      <header class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">💰 Mis Gastos</h1>
+        <button onclick="setView('profile')" aria-label="Mi perfil">${avatarHtml}</button>
+      </header>
+
+      <div class="flex flex-col items-center justify-center flex-1">
+        <div class="text-center mb-8">
+          <p class="text-gray-600 mb-8">Aún no tienes gastos compartidos</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+          <h3 class="font-semibold text-lg mb-3">¿Cómo funciona?</h3>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li>✓ Crea un gasto compartido</li>
+            <li>✓ Invita participantes por email</li>
+            <li>✓ Registra gastos y pagos</li>
+            <li>✓ Divide las cuentas automáticamente</li>
+          </ul>
+
+          <button
+            id="create-first-shared-expense"
+            class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+          >
+            Crear Primer Gasto Compartido
+          </button>
+        </div>
       </div>
     </div>
   `;
 }
 
-/**
- * Render de la lista con gastos
- */
-function renderList(sharedExpenses: any[], store: AppStore): string {
+function renderList(sharedExpenses: any[], store: AppStore, avatarHtml: string): string {
   return `
-    <header class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">💰 Mis Gastos</h1>
-      <p class="text-gray-600">Gestiona tus gastos compartidos</p>
+    <header class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">💰 Mis Gastos</h1>
+        <p class="text-sm text-gray-500">Gestiona tus gastos compartidos</p>
+      </div>
+      <button onclick="setView('profile')" aria-label="Mi perfil">${avatarHtml}</button>
     </header>
 
-    <button 
-      id="create-new-shared-expense" 
+    <button
+      id="create-new-shared-expense"
       class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium mb-6 hover:bg-blue-700 transition"
     >
       + Crear Nuevo Gasto Compartido
@@ -73,15 +82,12 @@ function renderList(sharedExpenses: any[], store: AppStore): string {
   `;
 }
 
-/**
- * Render de una tarjeta individual
- */
-function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
+function renderSharedExpenseCard(sharedExpense: any, _store: AppStore): string {
   const totalAmount = sharedExpense.totalAmount;
-  const participants = store.getParticipantsByIds(sharedExpense.participantIds);
+  const participantCount = sharedExpense.participants?.length ?? 0;
 
   return `
-    <div 
+    <div
       class="shared-expense-card bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
       data-expense-id="${sharedExpense.id}"
     >
@@ -111,12 +117,12 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
           </span>
         </div>
       </div>
-      
+
       <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
-        <span>👥 ${participants.length} participantes</span>
+        <span>👥 ${participantCount} participante${participantCount !== 1 ? "s" : ""}</span>
         <span class="font-semibold text-blue-600">${formatCurrency(totalAmount)}</span>
       </div>
-      
+
       <div class="text-xs text-gray-500 mt-2">
         Creado: ${formatDate(sharedExpense.createdAt)}
       </div>
@@ -125,7 +131,7 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
 }
 
 /**
- * Setup: Maneja interacciones de la lista
+ * Setup: Handles shared expense list interactions
  */
 export function setupSharedExpenseList(
   container: HTMLElement,
@@ -138,12 +144,10 @@ export function setupSharedExpenseList(
   const createNewButton = container.querySelector("#create-new-shared-expense");
   const list = container.querySelector("#shared-expense-list");
 
-  // Handler: Iniciar flujo de creación
   const handleStartCreate = () => {
     state.startCreateFlow(store);
   };
 
-  // Handler: Seleccionar un gasto compartido
   const handleSelectSharedExpense = async (
     id: string,
     cardEl: HTMLElement
@@ -153,11 +157,10 @@ export function setupSharedExpenseList(
     state.goToDashboard(store);
   };
 
-  // Event listeners para botones de crear
   createFirstButton?.addEventListener("click", handleStartCreate);
   createNewButton?.addEventListener("click", handleStartCreate);
 
-  // Event delegation para las tarjetas
+  // Event delegation for cards
   list?.addEventListener("click", (e) => {
     const card = (e.target as HTMLElement).closest<HTMLElement>(
       ".shared-expense-card"

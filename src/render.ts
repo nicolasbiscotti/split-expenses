@@ -39,6 +39,12 @@ import renderCreateStep3, {
   setupCreateStep3,
 } from "./components/createSteps/createStep3";
 
+// Landing (unauthenticated)
+import renderLanding, { setupLanding } from "./components/landing/landing";
+
+// Profile
+import renderProfile, { setupProfile } from "./components/profile/profile";
+
 /**
  * Main render function.
  * Called on every state or store change.
@@ -47,20 +53,30 @@ export default function render(state: AppState, store: AppStore): void {
   const app = document.getElementById("app");
   if (!app) return;
 
+  // Auth gate: show landing if user is not signed in
+  if (!store.getCurrentUser()) {
+    app.innerHTML = renderLanding(state, store);
+    setupLanding(app, store);
+    return;
+  }
+
   const currentId = store.getCurrentSharedExpenseId();
   const currentSharedExpense = currentId
     ? store.getSharedExpense(currentId)
     : null;
   const currentView = state.getCurrentView();
+  const currentUser = store.getCurrentUser()!;
 
   // Determine padding needs based on fixed bars
   const needsBottomNav =
-    currentView !== "shared-expense-list" && !currentView.startsWith("create");
+    currentView !== "shared-expense-list" &&
+    currentView !== "profile" &&
+    !currentView.startsWith("create");
   const needsTopBar = needsBottomNav;
 
   // Render HTML
   app.innerHTML = `
-    ${needsTopBar ? sharedExpenseTopBar(currentSharedExpense) : ""}
+    ${needsTopBar ? sharedExpenseTopBar(currentSharedExpense, currentUser) : ""}
 
     <div id="view-content" class="max-w-lg mx-auto ${needsBottomNav ? "p-4 pt-16 pb-20" : "p-4"}">
       ${renderViewContent(currentView, state, store)}
@@ -105,6 +121,9 @@ function renderViewContent(
 
     case "history":
       return renderHistory(state, store);
+
+    case "profile":
+      return renderProfile(state, store);
 
     default:
       return '<div class="text-center p-8">Vista no encontrada</div>';
@@ -183,6 +202,14 @@ function setupViewInteractions(
       const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupHistory(container, state, store);
+      }
+      break;
+    }
+
+    case "profile": {
+      const container = app.querySelector<HTMLElement>("#view-content");
+      if (container) {
+        setupProfile(container, state, store);
       }
       break;
     }

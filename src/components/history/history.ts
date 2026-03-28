@@ -1,19 +1,19 @@
-// src/history/history.ts
-
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import type { SharedExpenseParticipant } from "../../types";
 import { formatCurrency, formatDate } from "../../util/format";
 
 /**
- * Render: Historial de gastos y pagos
+ * Render: Expense and payment history
  */
 export default function renderHistory(
   _state: AppState,
   store: AppStore
 ): string {
+  const currentId = store.getCurrentSharedExpenseId() ?? "";
   const expenses = store.getExpenses();
   const payments = store.getPayments();
-  const participants = store.getParticipants();
+  const participants = store.getParticipantsForSharedExpense(currentId);
 
   return `
     <div class="space-y-4">
@@ -24,9 +24,9 @@ export default function renderHistory(
 }
 
 /**
- * Render: Sección de gastos
+ * Render: Expenses section
  */
-function renderExpensesSection(expenses: any[], participants: any[]): string {
+function renderExpensesSection(expenses: any[], participants: SharedExpenseParticipant[]): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold mb-3">Gastos</h2>
@@ -46,22 +46,25 @@ function renderExpensesSection(expenses: any[], participants: any[]): string {
 }
 
 /**
- * Render: Item individual de gasto
+ * Render: Single expense item
  */
-function renderExpenseItem(expense: any, participants: any[]): string {
-  const payer = participants.find((p) => p.id === expense.payerId);
+function renderExpenseItem(expense: any, participants: SharedExpenseParticipant[]): string {
+  const payer = participants.find((p) => p.email === expense.payerEmail);
+  const payerName = payer
+    ? (payer.displayName !== payer.email ? payer.displayName : payer.email)
+    : expense.payerEmail ?? "Desconocido";
 
   return `
     <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
       <div>
         <p class="font-medium">${expense.description}</p>
         <p class="text-sm text-gray-600">
-          ${payer?.name || "Desconocido"} · ${formatDate(expense.date)}
+          ${payerName} · ${formatDate(expense.date)}
         </p>
       </div>
       <div class="flex items-center gap-2">
         <span class="font-bold">${formatCurrency(expense.amount)}</span>
-        <button 
+        <button
           class="delete-expense-btn text-red-600 text-sm hover:text-red-800"
           data-expense-id="${expense.id}"
           title="Eliminar gasto"
@@ -74,9 +77,9 @@ function renderExpenseItem(expense: any, participants: any[]): string {
 }
 
 /**
- * Render: Sección de pagos
+ * Render: Payments section
  */
-function renderPaymentsSection(payments: any[], participants: any[]): string {
+function renderPaymentsSection(payments: any[], participants: SharedExpenseParticipant[]): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold mb-3">Pagos</h2>
@@ -96,17 +99,19 @@ function renderPaymentsSection(payments: any[], participants: any[]): string {
 }
 
 /**
- * Render: Item individual de pago
+ * Render: Single payment item
  */
-function renderPaymentItem(payment: any, participants: any[]): string {
-  const from = participants.find((p) => p.id === payment.fromId);
-  const to = participants.find((p) => p.id === payment.toId);
+function renderPaymentItem(payment: any, participants: SharedExpenseParticipant[]): string {
+  const resolveName = (email: string) => {
+    const p = participants.find((p) => p.email === email);
+    return p ? (p.displayName !== p.email ? p.displayName : p.email) : email ?? "Desconocido";
+  };
 
   return `
     <div class="flex justify-between items-center p-2 bg-green-50 rounded">
       <div>
         <p class="font-medium">
-          ${from?.name || "Desconocido"} → ${to?.name || "Desconocido"}
+          ${resolveName(payment.fromEmail)} → ${resolveName(payment.toEmail)}
         </p>
         <p class="text-sm text-gray-600">
           ${formatDate(payment.date)}
@@ -114,7 +119,7 @@ function renderPaymentItem(payment: any, participants: any[]): string {
       </div>
       <div class="flex items-center gap-2">
         <span class="font-bold text-green-600">${formatCurrency(payment.amount)}</span>
-        <button 
+        <button
           class="delete-payment-btn text-red-600 text-sm hover:text-red-800"
           data-payment-id="${payment.id}"
           title="Eliminar pago"
@@ -127,21 +132,20 @@ function renderPaymentItem(payment: any, participants: any[]): string {
 }
 
 /**
- * Setup: Maneja eliminación de gastos y pagos
+ * Setup: Handles expense and payment deletion
  */
 export function setupHistory(
   container: HTMLElement,
   _state: AppState,
   store: AppStore
 ): void {
-  // Handler: Eliminar gasto
   const handleDeleteExpense = async (id: string, btn: HTMLButtonElement) => {
     if (confirm("¿Eliminar este gasto?")) {
       btn.disabled = true;
       btn.textContent = "⏳";
       try {
         await store.deleteExpense(id, "history");
-      } catch (error) {
+      } catch (_error) {
         btn.disabled = false;
         btn.textContent = "🗑️";
         alert("Error al eliminar el gasto");
@@ -149,14 +153,13 @@ export function setupHistory(
     }
   };
 
-  // Handler: Eliminar pago
   const handleDeletePayment = async (id: string, btn: HTMLButtonElement) => {
     if (confirm("¿Eliminar este pago?")) {
       btn.disabled = true;
       btn.textContent = "⏳";
       try {
         await store.deletePayment(id, "history");
-      } catch (error) {
+      } catch (_error) {
         btn.disabled = false;
         btn.textContent = "🗑️";
         alert("Error al eliminar el pago");
@@ -164,7 +167,6 @@ export function setupHistory(
     }
   };
 
-  // Event delegation para botones de eliminar
   // Use closest() to handle clicks on child nodes of the button (e.g. emoji text)
   container.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button");

@@ -4,13 +4,14 @@ import type { Expense } from "../../types";
 import { showToast } from "../../util/toast";
 
 /**
- * Render: Formulario para agregar gastos
+ * Render: Expense form
  */
 export default function renderExpenseForm(
   _state: AppState,
   store: AppStore
 ): string {
-  const participants = store.getParticipants();
+  const currentId = store.getCurrentSharedExpenseId() ?? "";
+  const participants = store.getParticipantsForSharedExpense(currentId);
 
   return `
     <div class="bg-white rounded-lg shadow p-6">
@@ -18,52 +19,52 @@ export default function renderExpenseForm(
       <form id="expense-form" class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Quién pagó</label>
-          <select name="payerId" required class="w-full p-2 border rounded">
+          <select name="payerEmail" required class="w-full p-2 border rounded">
             <option value="">Selecciona...</option>
             ${participants
               .map(
                 (p) => `
-              <option value="${p.id}">${p.name}</option>
+              <option value="${p.email}">${p.displayName !== p.email ? p.displayName : p.email}</option>
             `
               )
               .join("")}
           </select>
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium mb-1">Monto</label>
-          <input 
-            type="number" 
-            name="amount" 
-            step="0.01" 
+          <input
+            type="number"
+            name="amount"
+            step="0.01"
             min="0.01"
-            required 
-            class="w-full p-2 border rounded" 
+            required
+            class="w-full p-2 border rounded"
             placeholder="0.00"
           >
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium mb-1">Descripción</label>
-          <input 
-            type="text" 
-            name="description" 
-            required 
-            class="w-full p-2 border rounded" 
+          <input
+            type="text"
+            name="description"
+            required
+            class="w-full p-2 border rounded"
             placeholder="Ej: Cena, Supermercado"
           >
         </div>
-        
+
         <div class="flex gap-2">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="flex-1 bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 transition"
           >
             Guardar
           </button>
-          <button 
-            type="button" 
-            id="cancel-expense" 
+          <button
+            type="button"
+            id="cancel-expense"
             class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition"
           >
             Cancelar
@@ -75,7 +76,7 @@ export default function renderExpenseForm(
 }
 
 /**
- * Setup: Maneja el formulario de gastos
+ * Setup: Handles the expense form submission
  */
 export function setupExpenseForm(
   form: HTMLFormElement,
@@ -106,7 +107,7 @@ export function setupExpenseForm(
       await store.addExpense(
         {
           sharedExpenseId: currentSharedExpenseId,
-          payerId: formData.get("payerId") as string,
+          payerEmail: formData.get("payerEmail") as string,
           amount: parseFloat(formData.get("amount") as string),
           description: formData.get("description") as string,
           date: new Date().toISOString(),
