@@ -1,3 +1,5 @@
+claude --resume "argentina-formatting-shared-header"
+
 1. Remove get from firestore.rules
 
 2. Current state: 
