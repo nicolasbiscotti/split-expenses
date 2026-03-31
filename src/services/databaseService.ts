@@ -9,6 +9,7 @@ import {
   setDoc,
   query,
   where,
+  or,
   orderBy,
   Timestamp,
   runTransaction,
@@ -228,12 +229,12 @@ export const sharedExpenseService = {
     return docRef.id;
   },
 
-  getForUser: async (uid: string): Promise<SharedExpense[]> => {
+  getForUser: async (uid: string, email: string): Promise<SharedExpense[]> => {
     const ref = collection(db, sharedExpensesCollectionPath);
     const snapshot = await getDocs(
       query(
         ref,
-        where("participantUids", "array-contains", uid),
+        or( where("participantUids", "array-contains", uid),where("participantEmails", "array-contains", email)),
         orderBy("createdAt", "desc")
       )
     );
@@ -242,10 +243,10 @@ export const sharedExpenseService = {
     );
   },
 
-  getByParticipantEmail: async (email: string): Promise<SharedExpense[]> => {
+  getByParticipantEmail: async (uid: string, email: string): Promise<SharedExpense[]> => {
     const ref = collection(db, sharedExpensesCollectionPath);
     const snapshot = await getDocs(
-      query(ref, where("participantEmails", "array-contains", email))
+      query(ref, or( where("participantUids", "array-contains", uid),where("participantEmails", "array-contains", email)))
     );
     return snapshot.docs.map(
       (d) => ({ id: d.id, ...d.data() } as SharedExpense)

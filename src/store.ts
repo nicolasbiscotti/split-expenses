@@ -52,7 +52,7 @@ export default class AppStore {
       // Load contacts and shared expenses in parallel
       const [contacts, sharedExpenses] = await Promise.all([
         contactService.getContacts(firebaseUser.uid),
-        sharedExpenseService.getForUser(firebaseUser.uid),
+        sharedExpenseService.getForUser(firebaseUser.uid, firebaseUser.email || ''),
       ]);
 
       this.contacts = contacts;
@@ -95,7 +95,7 @@ export default class AppStore {
   // Resolve shared expenses where the user was invited by email but UID not yet stored
   private async resolveInvites(uid: string, email: string): Promise<void> {
     if (!email) return;
-    const pendingSEs = await sharedExpenseService.getByParticipantEmail(email);
+    const pendingSEs = await sharedExpenseService.getByParticipantEmail(uid, email);
 
     const unresolved = pendingSEs.filter((se) => !se.participantUids.includes(uid));
     if (unresolved.length === 0) return;
@@ -107,7 +107,7 @@ export default class AppStore {
     );
 
     // Reload shared expenses to include the newly resolved ones
-    this.sharedExpenses = await sharedExpenseService.getForUser(uid);
+    this.sharedExpenses = await sharedExpenseService.getForUser(uid, email);
   }
 
   // ==================== CONTACTS ====================
