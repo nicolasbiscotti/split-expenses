@@ -1,0 +1,10 @@
+# Issues
+
+One file per issue. Open issues live in `open/`, resolved ones in `closed/`.
+To resolve an issue: move the file to `closed/` and add a **Resolved** date + **Resolution** section.
+
+| ID  | Type | Status | Title |
+|-----|------|--------|-------|
+| [001](closed/001-se-creation-crash-undefined-uid.md) | bug | closed | SE creation crash when selecting contact from checkbox |
+| [002](closed/002-remove-get-from-firestore-rules.md) | todo | closed | Remove get() calls from firestore.rules sub-collection checks |
+| [003](open/003-displayname-visibility-per-user.md) | todo | open | Design: displayName visibility per user in shared expenses |
