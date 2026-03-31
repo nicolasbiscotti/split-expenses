@@ -1,7 +1,10 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpenseParticipant } from "../../types";
-import { showToast } from "../../util/toast";
+import {
+  renderAddContactForm,
+  setupAddContactForm,
+} from "../shared/addContactForm";
 
 /**
  * Render: Step 2 of the wizard - participant selection
@@ -82,27 +85,7 @@ export default function renderCreateStep2(
 
       <!-- Zone 3: Add by email -->
       <div class="border-t pt-4">
-        <p class="text-sm font-medium text-gray-700 mb-2">Agregar por email</p>
-        <form id="add-participant-by-email" class="space-y-2">
-          <input
-            type="email"
-            id="new-participant-email"
-            placeholder="email@ejemplo.com"
-            class="w-full p-2 border rounded text-sm"
-          >
-          <input
-            type="text"
-            id="new-participant-name"
-            placeholder="Nombre (opcional)"
-            class="w-full p-2 border rounded text-sm"
-          >
-          <button
-            type="submit"
-            class="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
-          >
-            Agregar
-          </button>
-        </form>
+        ${renderAddContactForm("add-participant")}
       </div>
     </div>
 
@@ -127,9 +110,6 @@ export function setupCreateStep2(
   const backButton = container.querySelector<HTMLButtonElement>("#back-to-step-1");
   const continueButton = container.querySelector<HTMLButtonElement>("#continue-to-step-3");
   const checkboxes = container.querySelectorAll<HTMLInputElement>(".participant-checkbox");
-  const addByEmailForm = container.querySelector<HTMLFormElement>("#add-participant-by-email");
-  const emailInput = container.querySelector<HTMLInputElement>("#new-participant-email");
-  const nameInput = container.querySelector<HTMLInputElement>("#new-participant-name");
 
   backButton?.addEventListener("click", () => state.goToPreviousStep(store));
 
@@ -153,36 +133,16 @@ export function setupCreateStep2(
     });
   });
 
-  addByEmailForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = emailInput?.value.trim().toLowerCase();
-    if (!email) return;
-
-    const currentUser = store.getCurrentUser();
-    if (currentUser && email === currentUser.email) {
-      showToast("Ya eres participante de este gasto.", "error");
-      return;
-    }
-
-    const submitBtn = addByEmailForm.querySelector<HTMLButtonElement>('[type="submit"]');
-    if (submitBtn) submitBtn.disabled = true;
-
-    const displayName = nameInput?.value.trim() || undefined;
-
-    try {
-      // Save as contact and add to wizard participants
+  setupAddContactForm(container, {
+    formId: "add-participant",
+    currentUserEmail: store.getCurrentUser()?.email ?? null,
+    onAdd: async (email, displayName) => {
       await store.addContact(email, displayName);
       const participant: SharedExpenseParticipant = {
         email,
         displayName: displayName || email,
       };
       state.addParticipantToNew(participant, store);
-      if (emailInput) emailInput.value = "";
-      if (nameInput) nameInput.value = "";
-    } catch (error) {
-      console.error("Failed to add participant:", error);
-      showToast("Error al agregar el participante.", "error");
-      if (submitBtn) submitBtn.disabled = false;
-    }
+    },
   });
 }

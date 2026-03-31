@@ -2,6 +2,10 @@ import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import { authService } from "../../firebase/auth";
 import { showToast } from "../../util/toast";
+import {
+  renderAddContactForm,
+  setupAddContactForm,
+} from "../shared/addContactForm";
 
 /**
  * Render: Profile and contacts management view
@@ -75,27 +79,7 @@ export default function renderProfile(
         <div id="contacts-list" class="space-y-2 mb-4">
           ${contactsHtml}
         </div>
-        <form id="add-contact-form" class="space-y-2">
-          <input
-            type="email"
-            id="new-contact-email"
-            placeholder="email@ejemplo.com"
-            required
-            class="w-full p-2 border rounded-lg text-sm"
-          >
-          <input
-            type="text"
-            id="new-contact-name"
-            placeholder="Nombre (opcional)"
-            class="w-full p-2 border rounded-lg text-sm"
-          >
-          <button
-            type="submit"
-            class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-          >
-            Agregar
-          </button>
-        </form>
+        ${renderAddContactForm("add-contact")}
       </div>
     </div>
   `;
@@ -116,52 +100,21 @@ export function setupProfile(
       try {
         await authService.signOut();
         // onAuthStateChanged in main.ts will call clearUserData and re-render landing
-      } catch (error) {
-        console.error("Sign-out error:", error);
+      } catch (_error) {
         showToast("Error al cerrar sesión.", "error");
       }
     });
 
   // Add contact
-  container
-    .querySelector<HTMLFormElement>("#add-contact-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const input = container.querySelector<HTMLInputElement>(
-        "#new-contact-email"
-      );
-      const nameInput = container.querySelector<HTMLInputElement>(
-        "#new-contact-name"
-      );
-      const email = input?.value.trim().toLowerCase();
-      if (!email) return;
-
-      const currentUser = store.getCurrentUser();
-      if (currentUser && email === currentUser.email) {
-        showToast("No puedes agregarte a ti mismo como contacto.", "error");
-        return;
-      }
-
-      const submitBtn = container.querySelector<HTMLButtonElement>(
-        '#add-contact-form [type="submit"]'
-      );
-      if (submitBtn) submitBtn.disabled = true;
-
-      const displayName = nameInput?.value.trim() || undefined;
-
-      try {
-        await store.addContact(email, displayName);
-        if (input) input.value = "";
-        if (nameInput) nameInput.value = "";
-        showToast("Contacto agregado");
-        state.setCurrentView("profile", store); // re-render
-      } catch (error) {
-        console.error("Failed to add contact:", error);
-        showToast("Error al agregar el contacto.", "error");
-      } finally {
-        if (submitBtn) submitBtn.disabled = false;
-      }
-    });
+  setupAddContactForm(container, {
+    formId: "add-contact",
+    currentUserEmail: store.getCurrentUser()?.email ?? null,
+    onAdd: async (email, displayName) => {
+      await store.addContact(email, displayName);
+      showToast("Contacto agregado");
+      state.setCurrentView("profile", store);
+    },
+  });
 
   // Delete contact (event delegation)
   container
@@ -179,9 +132,8 @@ export function setupProfile(
       try {
         await store.removeContact(contactId);
         showToast("Contacto eliminado");
-        state.setCurrentView("profile", store); // re-render
-      } catch (error) {
-        console.error("Failed to remove contact:", error);
+        state.setCurrentView("profile", store);
+      } catch (_error) {
         btn.disabled = false;
         btn.textContent = "🗑️";
         showToast("Error al eliminar el contacto.", "error");
