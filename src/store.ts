@@ -115,7 +115,7 @@ export default class AppStore {
     return [...this.contacts];
   }
 
-  async addContact(email: string): Promise<void> {
+  async addContact(email: string, displayName?: string): Promise<void> {
     if (!this.currentUser) return;
     const alreadyExists = this.contacts.some((c) => c.email === email);
     if (alreadyExists) return;
@@ -123,7 +123,7 @@ export default class AppStore {
     const contact: Contact = {
       uid: "",
       email,
-      displayName: email,
+      displayName: displayName || email,
     };
 
     await contactService.addContact(this.currentUser.uid, contact);

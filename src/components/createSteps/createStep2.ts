@@ -83,16 +83,22 @@ export default function renderCreateStep2(
       <!-- Zone 3: Add by email -->
       <div class="border-t pt-4">
         <p class="text-sm font-medium text-gray-700 mb-2">Agregar por email</p>
-        <form id="add-participant-by-email" class="flex gap-2">
+        <form id="add-participant-by-email" class="space-y-2">
           <input
             type="email"
             id="new-participant-email"
             placeholder="email@ejemplo.com"
-            class="flex-1 p-2 border rounded text-sm"
+            class="w-full p-2 border rounded text-sm"
+          >
+          <input
+            type="text"
+            id="new-participant-name"
+            placeholder="Nombre (opcional)"
+            class="w-full p-2 border rounded text-sm"
           >
           <button
             type="submit"
-            class="bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
+            class="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
           >
             Agregar
           </button>
@@ -123,6 +129,7 @@ export function setupCreateStep2(
   const checkboxes = container.querySelectorAll<HTMLInputElement>(".participant-checkbox");
   const addByEmailForm = container.querySelector<HTMLFormElement>("#add-participant-by-email");
   const emailInput = container.querySelector<HTMLInputElement>("#new-participant-email");
+  const nameInput = container.querySelector<HTMLInputElement>("#new-participant-name");
 
   backButton?.addEventListener("click", () => state.goToPreviousStep(store));
 
@@ -139,7 +146,8 @@ export function setupCreateStep2(
       const participant: SharedExpenseParticipant = {
         email: checkbox.dataset.email!,
         displayName: checkbox.dataset.name!,
-        uid: checkbox.dataset.uid || undefined,
+        // Omit uid entirely when empty — Firestore rejects undefined values
+        ...(checkbox.dataset.uid ? { uid: checkbox.dataset.uid } : {}),
       };
       state.toggleParticipantInNew(participant, store);
     });
@@ -159,12 +167,18 @@ export function setupCreateStep2(
     const submitBtn = addByEmailForm.querySelector<HTMLButtonElement>('[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
 
+    const displayName = nameInput?.value.trim() || undefined;
+
     try {
       // Save as contact and add to wizard participants
-      await store.addContact(email);
-      const participant: SharedExpenseParticipant = { email, displayName: email };
+      await store.addContact(email, displayName);
+      const participant: SharedExpenseParticipant = {
+        email,
+        displayName: displayName || email,
+      };
       state.addParticipantToNew(participant, store);
       if (emailInput) emailInput.value = "";
+      if (nameInput) nameInput.value = "";
     } catch (error) {
       console.error("Failed to add participant:", error);
       showToast("Error al agregar el participante.", "error");

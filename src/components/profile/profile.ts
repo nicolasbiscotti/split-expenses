@@ -75,17 +75,23 @@ export default function renderProfile(
         <div id="contacts-list" class="space-y-2 mb-4">
           ${contactsHtml}
         </div>
-        <form id="add-contact-form" class="flex gap-2">
+        <form id="add-contact-form" class="space-y-2">
           <input
             type="email"
             id="new-contact-email"
             placeholder="email@ejemplo.com"
             required
-            class="flex-1 p-2 border rounded-lg text-sm"
+            class="w-full p-2 border rounded-lg text-sm"
+          >
+          <input
+            type="text"
+            id="new-contact-name"
+            placeholder="Nombre (opcional)"
+            class="w-full p-2 border rounded-lg text-sm"
           >
           <button
             type="submit"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+            class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
           >
             Agregar
           </button>
@@ -124,6 +130,9 @@ export function setupProfile(
       const input = container.querySelector<HTMLInputElement>(
         "#new-contact-email"
       );
+      const nameInput = container.querySelector<HTMLInputElement>(
+        "#new-contact-name"
+      );
       const email = input?.value.trim().toLowerCase();
       if (!email) return;
 
@@ -138,9 +147,12 @@ export function setupProfile(
       );
       if (submitBtn) submitBtn.disabled = true;
 
+      const displayName = nameInput?.value.trim() || undefined;
+
       try {
-        await store.addContact(email);
+        await store.addContact(email, displayName);
         if (input) input.value = "";
+        if (nameInput) nameInput.value = "";
         showToast("Contacto agregado");
         state.setCurrentView("profile", store); // re-render
       } catch (error) {
