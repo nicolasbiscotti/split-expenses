@@ -109,11 +109,6 @@ export const expenseService = {
     let docRef;
 
     await runTransaction(db, async () => {
-      docRef = await addDoc(collectionRef, {
-        ...expense,
-        createdAt: Timestamp.now(),
-      });
-
       const expenseList = await this.getExpenses(expense.sharedExpenseId);
 
       const seTotalAmount = expenseList.reduce(
@@ -122,7 +117,12 @@ export const expenseService = {
       );
 
       await sharedExpenseService.update(expense.sharedExpenseId, {
-        totalAmount: seTotalAmount,
+        totalAmount: seTotalAmount + expense.amount,
+      });
+
+      docRef = await addDoc(collectionRef, {
+        ...expense,
+        createdAt: Timestamp.now(),
       });
     });
 

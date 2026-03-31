@@ -30,7 +30,7 @@ service cloud.firestore {
       function onlyUpdatingJoinFields() {
         let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
         // Participants can only touch 'participantUids' and 'participants'
-        return affectedKeys.hasOnly(['participantUids', 'participants']);
+        return affectedKeys.hasOnly(['participantUids', 'participants', 'totalAmount']);
       }
 
       // Helper: Verify the user is adding THEIR OWN UID and not someone else's
@@ -53,7 +53,7 @@ service cloud.firestore {
         allow delete: if isCreator();
 
         // Sub-collections: Expenses and Payments
-        match /{collection}/{docId} {
+        match /expenses/{docId} {
 
           // Must be a participant to even see the records
           allow read: if request.auth != null;
@@ -61,13 +61,31 @@ service cloud.firestore {
           // Permission to Create:
           // 1. User must be a participant.
           // 2. User is either the Group Creator OR the Email matches their auth email.
-          allow create: if request.auth != null;
+          allow create: if request.auth != null && request.resource.data.payerEmail == request.auth.token.email || request.resource.data.adminUid == request.auth.uid;
 
           // Permission to Update/Delete:
           // 1. Group Creator has total control.
           // 2. Participants can only edit/delete if their email matches the record.
-          allow update, delete: if request.auth != null;
+          allow update, delete: if request.auth != null && resource.data.payerEmail == request.auth.token.email || resource.data.adminUid == request.auth.uid;
         }
+
+        // Sub-collections: Expenses and Payments
+        match /payments/{docId} {
+
+          // Must be a participant to even see the records
+          allow read: if request.auth != null;
+
+          // Permission to Create:
+          // 1. User must be a participant.
+          // 2. User is either the Group Creator OR the Email matches their auth email.
+          allow create: if request.auth != null && request.resource.data.fromEmail == request.auth.token.email || request.resource.data.adminUid == request.auth.uid;
+
+          // Permission to Update/Delete:
+          // 1. Group Creator has total control.
+          // 2. Participants can only edit/delete if their email matches the record.
+          allow update, delete: if request.auth != null && resource.data.fromEmail == request.auth.token.email || resource.data.adminUid == request.auth.uid;
+        }
+        
       }
     }
   }

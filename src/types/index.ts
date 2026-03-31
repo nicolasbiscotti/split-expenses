@@ -20,6 +20,7 @@ export interface SharedExpenseParticipant {
 export interface Expense {
   id: string;
   sharedExpenseId: string;
+  adminUid: string;
   payerEmail: string;
   amount: number;
   description: string;
@@ -29,6 +30,7 @@ export interface Expense {
 export interface Payment {
   id: string;
   sharedExpenseId: string;
+  adminUid: string;
   fromEmail: string;
   toEmail: string;
   amount: number;

@@ -146,6 +146,8 @@ export default class AppStore {
 
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
     try {
+      const se = this.sharedExpenses.find((s) => s.id === expense.sharedExpenseId);
+      expense.adminUid = se?.creatorUid ?? "";
       const expenseId = await expenseService.createExpense(expense);
       expense.id = expenseId;
       this.expenses.push(expense);
@@ -186,6 +188,8 @@ export default class AppStore {
 
   async addPayment(payment: Payment, currentView: ViewType): Promise<void> {
     try {
+      const se = this.sharedExpenses.find((s) => s.id === payment.sharedExpenseId);
+      payment.adminUid = se?.creatorUid ?? "";
       const paymentId = await paymentService.createPayment(payment);
       payment.id = paymentId;
       this.payments.push(payment);
