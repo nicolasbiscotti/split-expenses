@@ -133,3 +133,10 @@ dist-ssr/
 # Firebase Emulator data
 .emulators/
 
+# Firebase Admin SDK service account key — never commit this
+serviceAccountKey.json
+*serviceAccountKey*.json
+
+# Firestore backup exports
+backup-data/
+

@@ -1,16 +1,24 @@
 import admin from "firebase-admin";
 import { readFileSync, writeFileSync } from "fs";
 
-// to test the script with Emulators run:
-// `FIREBASE_PROJECT_ID=the-project-id FIRESTORE_DATA_ID=development FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/firebase-admin-sdk/backup.js`
+// to test the script with Emulators set with export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 (unset FIRESTORE_EMULATOR_HOST):
+// FIREBASE_PROJECT_ID=the-project-id (required)
+// FIRESTORE_DATA_ID=development (required)
+// FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 
+// and run:
+// node scripts/firebase-admin-sdk/backup.js`
 
 // When FIRESTORE_EMULATOR_HOST is set the Admin SDK routes all traffic to the
 // local emulator, so no service account key is needed.
 if (process.env.FIRESTORE_EMULATOR_HOST) {
-  console.log(`Using Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
+  console.log(
+    `Using Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`,
+  );
   admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
 } else {
-  const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
+  const serviceAccount = JSON.parse(
+    readFileSync("./scripts/firebase-admin-sdk/serviceAccountKey.json", "utf8"),
+  );
   admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }
 
@@ -81,7 +89,7 @@ async function backupSharedExpenses(environmentId) {
   }
 
   // Save to file
-  const fileName = `./backup-data/backup_shared_expenses_${new Date().toISOString().split("T")[0]}.json`;
+  const fileName = `./backup-data/backup_shared_expenses_${process.env.FIRESTORE_DATA_ID}_${new Date().toISOString().split("T")[0]}.json`;
   writeFileSync(fileName, JSON.stringify(backupData, null, 2));
 
   console.log("------------------------------------------");

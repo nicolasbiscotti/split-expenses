@@ -1,12 +1,24 @@
-const admin = require("firebase-admin");
-const fs = require("fs");
+import admin from "firebase-admin";
+import { readFileSync } from "fs";
 
-// 1. Initialize Admin SDK
-const serviceAccount = require("./serviceAccountKey.json");
+// to test the script with Emulators set with export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 (unset FIRESTORE_EMULATOR_HOST):
+// FIREBASE_PROJECT_ID=the-project-id (required)
+// FIRESTORE_DATA_ID=development (required)
+// FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 
+// and run:
+// node scripts/firebase-admin-sdk/backup.js`
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (process.env.FIRESTORE_EMULATOR_HOST) {
+  console.log(
+    `Using Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`,
+  );
+  admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
+} else {
+  const serviceAccount = JSON.parse(
+    readFileSync("./serviceAccountKey.json", "utf8"),
+  );
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
 
 const db = admin.firestore();
 
@@ -26,15 +38,7 @@ function prepareDataForFirestore(data) {
   for (const key in cleanData) {
     const value = cleanData[key];
 
-    // Detect ISO Date strings (YYYY-MM-DDTHH:mm:ss...)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-    if (typeof value === "string" && dateRegex.test(value)) {
-      cleanData[key] = admin.firestore.Timestamp.fromDate(new Date(value));
-    } else if (
-      typeof value === "object" &&
-      value !== null &&
-      !Array.isArray(value)
-    ) {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       cleanData[key] = prepareDataForFirestore(value);
     }
   }
@@ -44,7 +48,7 @@ function prepareDataForFirestore(data) {
 async function importSharedExpenses(environmentId, backupFileName) {
   console.log(`Reading backup file: ${backupFileName}...`);
 
-  const rawData = fs.readFileSync(backupFileName);
+  const rawData = readFileSync(backupFileName);
   const backupData = JSON.parse(rawData);
 
   console.log(`Starting import for ${backupData.length} Shared Expenses...`);
@@ -90,8 +94,10 @@ async function importSharedExpenses(environmentId, backupFileName) {
 
 // EXECUTION
 // Change the filename to match your actual backup file
-const BACKUP_FILE = "backup_shared_expenses_2024-05-20.json";
+const BACKUP_FILE = "./backup-data/backup_shared_expenses_2026-04-01.json";
 
-importSharedExpenses("prod", BACKUP_FILE).catch((err) => {
-  console.error("❌ Import failed:", err);
-});
+importSharedExpenses(process.env.FIRESTORE_DATA_ID, BACKUP_FILE).catch(
+  (err) => {
+    console.error("❌ Import failed:", err);
+  },
+);
