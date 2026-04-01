@@ -1,13 +1,18 @@
-const admin = require("firebase-admin");
-const fs = require("fs");
+import admin from "firebase-admin";
+import { readFileSync, writeFileSync } from "fs";
 
-// 1. Initialize Admin SDK
-// Replace 'serviceAccountKey.json' with the path to your downloaded file
-const serviceAccount = require("./serviceAccountKey.json");
+// to test the script with Emulators run:
+// `FIREBASE_PROJECT_ID=the-project-id FIRESTORE_DATA_ID=development FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node scripts/firebase-admin-sdk/backup.js`
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// When FIRESTORE_EMULATOR_HOST is set the Admin SDK routes all traffic to the
+// local emulator, so no service account key is needed.
+if (process.env.FIRESTORE_EMULATOR_HOST) {
+  console.log(`Using Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
+  admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
+} else {
+  const serviceAccount = JSON.parse(readFileSync("./serviceAccountKey.json", "utf8"));
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
 
 const db = admin.firestore();
 
@@ -76,8 +81,8 @@ async function backupSharedExpenses(environmentId) {
   }
 
   // Save to file
-  const fileName = `backup_shared_expenses_${new Date().toISOString().split("T")[0]}.json`;
-  fs.writeFileSync(fileName, JSON.stringify(backupData, null, 2));
+  const fileName = `./backup-data/backup_shared_expenses_${new Date().toISOString().split("T")[0]}.json`;
+  writeFileSync(fileName, JSON.stringify(backupData, null, 2));
 
   console.log("------------------------------------------");
   console.log(`✅ Success! Backup saved to: ${fileName}`);
@@ -86,6 +91,6 @@ async function backupSharedExpenses(environmentId) {
 
 // EXECUTION
 // Change 'prod' to whatever your {dataId} environment name is
-backupSharedExpenses("prod").catch((err) => {
+backupSharedExpenses(process.env.FIRESTORE_DATA_ID).catch((err) => {
   console.error("❌ Backup failed:", err);
 });
