@@ -1,11 +1,11 @@
-import type { ViewType, StepValue } from "../types";
+import type { ViewType, StepValue, SharedExpenseParticipant } from "../types";
 import type AppStore from "../store";
 
 export interface NewSharedExpenseData {
   name: string;
   description: string;
   type: "unique" | "recurring";
-  participantIds: string[];
+  participants: SharedExpenseParticipant[];
 }
 
 type RenderFunction = (state: AppState, store: AppStore) => void;
@@ -17,7 +17,7 @@ export default class AppState {
     name: "",
     description: "",
     type: "unique",
-    participantIds: [],
+    participants: [],
   };
   private renderFunctions: RenderFunction[] = [];
 
@@ -58,15 +58,10 @@ export default class AppState {
 
   // ==================== NEW SHARED EXPENSE DATA ====================
   getNewSharedExpenseData(): NewSharedExpenseData {
-    return { ...this.newSharedExpenseData };
-  }
-
-  updateNewSharedExpenseData(updates: Partial<NewSharedExpenseData>): void {
-    this.newSharedExpenseData = {
+    return {
       ...this.newSharedExpenseData,
-      ...updates,
+      participants: [...this.newSharedExpenseData.participants],
     };
-    // NO notificamos aquí para evitar re-renders innecesarios en cada tecla
   }
 
   setNewSharedExpenseName(name: string): void {
@@ -81,14 +76,34 @@ export default class AppState {
     this.newSharedExpenseData.type = type;
   }
 
-  toggleParticipantInNew(userId: string, store: AppStore): void {
-    const index = this.newSharedExpenseData.participantIds.indexOf(userId);
+  // Toggle a participant in/out of the new shared expense (matched by email)
+  toggleParticipantInNew(
+    participant: SharedExpenseParticipant,
+    store: AppStore
+  ): void {
+    const index = this.newSharedExpenseData.participants.findIndex(
+      (p) => p.email === participant.email
+    );
     if (index === -1) {
-      this.newSharedExpenseData.participantIds.push(userId);
+      this.newSharedExpenseData.participants.push(participant);
     } else {
-      this.newSharedExpenseData.participantIds.splice(index, 1);
+      this.newSharedExpenseData.participants.splice(index, 1);
     }
-    this.notify(store); // Notificamos porque cambia la UI
+    this.notify(store);
+  }
+
+  // Add a participant without toggling (used for add-by-email in step 2)
+  addParticipantToNew(
+    participant: SharedExpenseParticipant,
+    store: AppStore
+  ): void {
+    const alreadyAdded = this.newSharedExpenseData.participants.some(
+      (p) => p.email === participant.email
+    );
+    if (!alreadyAdded) {
+      this.newSharedExpenseData.participants.push(participant);
+      this.notify(store);
+    }
   }
 
   resetNewSharedExpenseData(): void {
@@ -96,7 +111,7 @@ export default class AppState {
       name: "",
       description: "",
       type: "unique",
-      participantIds: [],
+      participants: [],
     };
     this.createStep = 1;
   }
@@ -106,8 +121,9 @@ export default class AppState {
     return this.newSharedExpenseData.name.trim().length > 0;
   }
 
+  // Requires at least 2 participants (creator is auto-included as first entry)
   canProceedToStep3(): boolean {
-    return this.newSharedExpenseData.participantIds.length >= 2;
+    return this.newSharedExpenseData.participants.length >= 2;
   }
 
   isNewSharedExpenseValid(): boolean {
@@ -117,6 +133,15 @@ export default class AppState {
   // ==================== NAVIGATION HELPERS ====================
   startCreateFlow(store: AppStore): void {
     this.resetNewSharedExpenseData();
+    // Auto-include the current user as first participant
+    const currentUser = store.getCurrentUser();
+    if (currentUser) {
+      this.newSharedExpenseData.participants.push({
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        uid: currentUser.uid,
+      });
+    }
     this.setCurrentView("create-step-1", store);
   }
 
@@ -140,6 +165,10 @@ export default class AppState {
     this.setCurrentView("history", store);
   }
 
+  goToProfile(store: AppStore): void {
+    this.setCurrentView("profile", store);
+  }
+
   // ==================== OBSERVER PATTERN ====================
   subscribeRender(renderFn: RenderFunction): () => void {
     this.renderFunctions.push(renderFn);
@@ -150,7 +179,7 @@ export default class AppState {
     };
   }
 
-  private notify(store: AppStore): void {
+  notify(store: AppStore): void {
     this.renderFunctions.forEach((renderFn) => renderFn(this, store));
   }
 

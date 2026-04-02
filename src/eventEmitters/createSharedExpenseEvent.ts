@@ -18,7 +18,7 @@ export default function dispatchCreateSharedExpenseEvent(): void {
           name: "",
           description: "",
           type: "unique",
-          participantIds: [],
+          participants: [],
         },
       },
       bubbles: true,

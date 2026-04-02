@@ -69,6 +69,7 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.script
 
 .databaserule.*
 
@@ -132,4 +133,14 @@ dist-ssr/
 
 # Firebase Emulator data
 .emulators/
+
+# Firebase Admin SDK service account key — never commit this
+serviceAccountKey.json
+*serviceAccountKey*.json
+
+# Migration mapping file contains real UIDs and emails
+scripts/firebase-admin-sdk/migration-mapping.json
+
+# Firestore backup exports
+backup-data/
 

@@ -1,22 +1,27 @@
+import type { User } from "firebase/auth";
 import {
   expenseService,
-  participantService,
   paymentService,
   sharedExpenseService,
+  userProfileService,
+  contactService,
 } from "./services/databaseService";
 import type AppState from "./state/AppState";
 import type {
-  Participant,
+  UserProfile,
+  Contact,
   Expense,
   Payment,
   SharedExpense,
+  SharedExpenseParticipant,
   ViewType,
 } from "./types";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";
 
 export default class AppStore {
-  private participants: Participant[] = [];
+  private currentUser: UserProfile | null = null;
+  private contacts: Contact[] = [];
   private expenses: Expense[] = [];
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
@@ -25,16 +30,113 @@ export default class AppStore {
 
   constructor(state: AppState) {
     this.state = state;
-    this.loadFromStorage();
   }
 
-  // ==================== PARTICIPANTS ====================
-  getParticipants(): Participant[] {
-    return [...this.participants];
+  // ==================== AUTH ====================
+  getCurrentUser(): UserProfile | null {
+    return this.currentUser;
   }
 
-  getParticipantsByIds(ids: string[]): Participant[] {
-    return this.participants.filter((p) => ids.includes(p.id));
+  async initializeForUser(firebaseUser: User): Promise<void> {
+    try {
+      // Upsert user profile in Firestore
+      await userProfileService.ensureProfile(firebaseUser);
+
+      this.currentUser = {
+        uid: firebaseUser.uid,
+        displayName: firebaseUser.displayName ?? firebaseUser.email ?? "Usuario",
+        email: firebaseUser.email ?? "",
+        photoURL: firebaseUser.photoURL,
+      };
+
+      // Load contacts and shared expenses in parallel
+      const [contacts, sharedExpenses] = await Promise.all([
+        contactService.getContacts(firebaseUser.uid),
+        sharedExpenseService.getForUser(firebaseUser.uid, firebaseUser.email || ''),
+      ]);
+
+      this.contacts = contacts;
+      this.sharedExpenses = sharedExpenses;
+
+      // Resolve any pending invite (SE where user's email appears but UID not yet stored)
+      await this.resolveInvites(firebaseUser.uid, firebaseUser.email ?? "");
+
+      // Restore cached current shared expense
+      const cachedId = localStorage.getItem(CACHE_KEY_CURRENT_EXPENSE);
+      if (cachedId && this.sharedExpenses.some((se) => se.id === cachedId)) {
+        this.currentSharedExpenseId = cachedId;
+        await this.loadExpensesAndPayments();
+      } else {
+        localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
+        this.currentSharedExpenseId = null;
+      }
+
+      const initialView = this.currentSharedExpenseId
+        ? "dashboard"
+        : "shared-expense-list";
+      this.state.setCurrentView(initialView, this);
+    } catch (error) {
+      console.error("Failed to initialize for user:", error);
+      this.state.notify(this);
+    }
+  }
+
+  clearUserData(): void {
+    this.currentUser = null;
+    this.contacts = [];
+    this.expenses = [];
+    this.payments = [];
+    this.sharedExpenses = [];
+    this.currentSharedExpenseId = null;
+    localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
+    this.state.notify(this);
+  }
+
+  // Resolve shared expenses where the user was invited by email but UID not yet stored
+  private async resolveInvites(uid: string, email: string): Promise<void> {
+    if (!email) return;
+    const pendingSEs = await sharedExpenseService.getByParticipantEmail(uid, email);
+
+    const unresolved = pendingSEs.filter((se) => !se.participantUids.includes(uid));
+    if (unresolved.length === 0) return;
+
+    await Promise.all(
+      unresolved.map((se) =>
+        sharedExpenseService.resolveParticipantUid(se.id, email, uid)
+      )
+    );
+
+    // Reload shared expenses to include the newly resolved ones
+    this.sharedExpenses = await sharedExpenseService.getForUser(uid, email);
+  }
+
+  // ==================== CONTACTS ====================
+  getContacts(): Contact[] {
+    return [...this.contacts];
+  }
+
+  async addContact(email: string, displayName?: string): Promise<void> {
+    if (!this.currentUser) return;
+    const alreadyExists = this.contacts.some((c) => c.email === email);
+    if (alreadyExists) return;
+
+    const contact: Contact = {
+      uid: "",
+      email,
+      displayName: displayName || email,
+    };
+
+    await contactService.addContact(this.currentUser.uid, contact);
+    this.contacts.push(contact);
+  }
+
+  async removeContact(contactId: string): Promise<void> {
+    if (!this.currentUser) return;
+    await contactService.removeContact(this.currentUser.uid, contactId);
+    this.contacts = this.contacts.filter((c) => {
+      const id = c.email.replace(/[^a-zA-Z0-9]/g, "_");
+      return id !== contactId;
+    });
   }
 
   // ==================== EXPENSES ====================
@@ -42,12 +144,10 @@ export default class AppStore {
     return [...this.expenses];
   }
 
-  getExpensesBySharedExpense(sharedExpenseId: string): Expense[] {
-    return this.expenses.filter((e) => e.sharedExpenseId === sharedExpenseId);
-  }
-
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
     try {
+      const se = this.sharedExpenses.find((s) => s.id === expense.sharedExpenseId);
+      expense.adminUid = se?.creatorUid ?? "";
       const expenseId = await expenseService.createExpense(expense);
       expense.id = expenseId;
       this.expenses.push(expense);
@@ -86,12 +186,10 @@ export default class AppStore {
     return [...this.payments];
   }
 
-  getPaymentsBySharedExpense(sharedExpenseId: string): Payment[] {
-    return this.payments.filter((p) => p.sharedExpenseId === sharedExpenseId);
-  }
-
   async addPayment(payment: Payment, currentView: ViewType): Promise<void> {
     try {
+      const se = this.sharedExpenses.find((s) => s.id === payment.sharedExpenseId);
+      payment.adminUid = se?.creatorUid ?? "";
       const paymentId = await paymentService.createPayment(payment);
       payment.id = paymentId;
       this.payments.push(payment);
@@ -124,6 +222,10 @@ export default class AppStore {
     return this.sharedExpenses.find((se) => se.id === id);
   }
 
+  getParticipantsForSharedExpense(seId: string): SharedExpenseParticipant[] {
+    return this.sharedExpenses.find((se) => se.id === seId)?.participants ?? [];
+  }
+
   async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
     try {
       const sharedExpenseId = await sharedExpenseService.create({
@@ -131,12 +233,15 @@ export default class AppStore {
         description: sharedExpense.description,
         type: sharedExpense.type,
         status: sharedExpense.status,
-        participantIds: sharedExpense.participantIds,
+        creatorUid: sharedExpense.creatorUid,
+        participants: sharedExpense.participants,
+        participantUids: sharedExpense.participantUids,
+        participantEmails: sharedExpense.participantEmails,
         totalAmount: sharedExpense.totalAmount,
         createdAt: sharedExpense.createdAt,
       });
       sharedExpense.id = sharedExpenseId;
-      this.sharedExpenses.push(sharedExpense);
+      this.sharedExpenses.unshift(sharedExpense); // newest first
       await this.setCurrentSharedExpenseId(sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {
@@ -171,61 +276,26 @@ export default class AppStore {
     return this.currentSharedExpenseId;
   }
 
-  async setCurrentSharedExpenseId(id: string | null) {
+  async setCurrentSharedExpenseId(id: string | null): Promise<void> {
     this.currentSharedExpenseId = id;
 
     if (id) {
-      await this.loadData();
+      await this.loadExpensesAndPayments();
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
+      this.expenses = [];
+      this.payments = [];
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     }
   }
 
-  private loadCachedCurrentExpenseId(): void {
-    const cachedId = localStorage.getItem(CACHE_KEY_CURRENT_EXPENSE);
-
-    // Only use the cache if the shared expense still exists
-    if (cachedId && this.getSharedExpense(cachedId)) {
-      this.currentSharedExpenseId = cachedId;
-    } else {
-      // Stale cache — clear it
-      localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
-    }
-  }
-
-  // ==================== LOAD FROM STORAGE ====================
-  async loadFromStorage(): Promise<void> {
-    try {
-      this.loadCachedCurrentExpenseId();
-      await this.loadData();
-      if (this.participants.length === 0) {
-        await participantService.createParticipantList();
-        await this.loadData();
-      }
-    } catch (error) {
-      console.error("Error loading data from Firebase:", error);
-    } finally {
-      const initialView = this.currentSharedExpenseId
-        ? "dashboard"
-        : "shared-expense-list";
-
-      this.state.setCurrentView(initialView, this);
-    }
-  }
-
-  private async loadData(): Promise<void> {
-    const [expenses, payments, participants, sharedExpenses] =
-      await Promise.all([
-        expenseService.getExpenses(this.currentSharedExpenseId || ""),
-        paymentService.getPayments(this.currentSharedExpenseId || ""),
-        participantService.getParticipants(),
-        sharedExpenseService.getAll(),
-      ]);
-
+  private async loadExpensesAndPayments(): Promise<void> {
+    const id = this.currentSharedExpenseId || "";
+    const [expenses, payments] = await Promise.all([
+      expenseService.getExpenses(id),
+      paymentService.getPayments(id),
+    ]);
     this.expenses = expenses;
     this.payments = payments;
-    this.participants = participants;
-    this.sharedExpenses = sharedExpenses;
   }
 }

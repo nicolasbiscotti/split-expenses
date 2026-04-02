@@ -2,6 +2,7 @@ import "./style.css";
 import AppStore from "./store";
 import render from "./render";
 import AppState from "./state/AppState";
+import { authService } from "./firebase/auth";
 import type { ViewType } from "./types";
 
 // ==================== INIT ====================
@@ -22,4 +23,12 @@ window.setView = (view) => {
 
 // ==================== START APP ====================
 state.subscribeRender(render);
-// Do not call render() here — loadFromStorage() triggers the first render
+
+// Auth state drives the entire app lifecycle
+authService.onAuthStateChanged(async (firebaseUser) => {
+  if (firebaseUser) {
+    await store.initializeForUser(firebaseUser);
+  } else {
+    store.clearUserData();
+  }
+});

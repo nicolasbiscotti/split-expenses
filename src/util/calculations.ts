@@ -1,36 +1,36 @@
-import type { Participant, Expense, Payment, Balance, Debt } from "../types";
+import type { SharedExpenseParticipant, Expense, Payment, Balance, Debt } from "../types";
 
 export function calculateBalances(
-  participants: Participant[],
+  participants: SharedExpenseParticipant[],
   expenses: Expense[],
   payments: Payment[]
-) {
-  const balances = new Map();
-  participants.forEach((participant) => balances.set(participant.id, 0));
+): Balance[] {
+  const balances = new Map<string, number>();
+  participants.forEach((p) => balances.set(p.email, 0));
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const sharePerPerson = totalExpenses / participants.length;
-  participants.forEach((participant) => balances.set(participant.id, -sharePerPerson));
+  participants.forEach((p) => balances.set(p.email, -sharePerPerson));
 
   expenses.forEach((expense) => {
-    const current = balances.get(expense.payerId) || 0;
-    balances.set(expense.payerId, current + expense.amount);
+    const current = balances.get(expense.payerEmail) ?? 0;
+    balances.set(expense.payerEmail, current + expense.amount);
   });
 
   payments.forEach((payment) => {
-    const fromBalance = balances.get(payment.fromId) || 0;
-    const toBalance = balances.get(payment.toId) || 0;
-    balances.set(payment.fromId, fromBalance + payment.amount);
-    balances.set(payment.toId, toBalance - payment.amount);
+    const fromBalance = balances.get(payment.fromEmail) ?? 0;
+    const toBalance = balances.get(payment.toEmail) ?? 0;
+    balances.set(payment.fromEmail, fromBalance + payment.amount);
+    balances.set(payment.toEmail, toBalance - payment.amount);
   });
 
-  return Array.from(balances.entries()).map(([participantId, balance]) => ({
-    participantId,
+  return Array.from(balances.entries()).map(([email, balance]) => ({
+    email,
     balance: Math.round(balance * 100) / 100,
   }));
 }
 
-export function calculateDebts(balances: Balance[]) {
+export function calculateDebts(balances: Balance[]): Debt[] {
   const debts: Debt[] = [];
   const debtors = balances
     .filter((b) => b.balance < -0.01)
@@ -51,8 +51,8 @@ export function calculateDebts(balances: Balance[]) {
     const settleAmount = Math.min(Math.abs(debtor.balance), creditor.balance);
 
     debts.push({
-      fromId: debtor.participantId,
-      toId: creditor.participantId,
+      fromEmail: debtor.email,
+      toEmail: creditor.email,
       amount: Math.round(settleAmount * 100) / 100,
     });
 

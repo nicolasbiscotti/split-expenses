@@ -1,13 +1,13 @@
-import type { Debt, Participant } from "../../types";
+import type { Debt, SharedExpenseParticipant } from "../../types";
 import { formatCurrency } from "../../util/format";
 
 /**
- * Render: Lista de deudas sugeridas para saldar
- * Este es un componente compartido usado por dashboard y paymentForm
+ * Render: Suggested debts to settle
+ * Shared component used by dashboard and paymentForm
  */
 export default function renderDebtList(
   debts: Debt[],
-  participants: Participant[]
+  participants: SharedExpenseParticipant[]
 ): string {
   if (debts.length === 0) {
     return "";
@@ -24,17 +24,19 @@ export default function renderDebtList(
 }
 
 /**
- * Render: Item individual de deuda
+ * Render: Single debt item
  */
-function renderDebtItem(debt: Debt, participants: Participant[]): string {
-  const from = participants.find((p) => p.id === debt.fromId);
-  const to = participants.find((p) => p.id === debt.toId);
+function renderDebtItem(debt: Debt, participants: SharedExpenseParticipant[]): string {
+  const resolveName = (email: string) => {
+    const p = participants.find((p) => p.email === email);
+    return p ? (p.displayName !== p.email ? p.displayName : p.email) : email;
+  };
 
   return `
     <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded">
-      <span class="font-medium">${from?.name || "Desconocido"}</span>
+      <span class="font-medium">${resolveName(debt.fromEmail)}</span>
       <span class="text-gray-600">→</span>
-      <span class="font-medium">${to?.name || "Desconocido"}</span>
+      <span class="font-medium">${resolveName(debt.toEmail)}</span>
       <span class="ml-auto font-bold text-yellow-700">
         ${formatCurrency(debt.amount)}
       </span>

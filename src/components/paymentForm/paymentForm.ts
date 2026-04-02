@@ -6,13 +6,14 @@ import renderDebtList from "../dashboard/debtList";
 import { showToast } from "../../util/toast";
 
 /**
- * Render: Formulario para registrar pagos + sugerencias de deudas
+ * Render: Payment form + debt suggestions
  */
 export default function renderPaymentForm(
   _state: AppState,
   store: AppStore
 ): string {
-  const participants = store.getParticipants();
+  const currentId = store.getCurrentSharedExpenseId() ?? "";
+  const participants = store.getParticipantsForSharedExpense(currentId);
   const expenses = store.getExpenses();
   const payments = store.getPayments();
   const balances = calculateBalances(participants, expenses, payments);
@@ -25,55 +26,55 @@ export default function renderPaymentForm(
         <form id="payment-form" class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-1">Quién paga</label>
-            <select name="fromId" required class="w-full p-2 border rounded">
+            <select name="fromEmail" required class="w-full p-2 border rounded">
               <option value="">Selecciona...</option>
               ${participants
                 .map(
                   (p) => `
-                <option value="${p.id}">${p.name}</option>
+                <option value="${p.email}">${p.displayName !== p.email ? p.displayName : p.email}</option>
               `
                 )
                 .join("")}
             </select>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium mb-1">A quién paga</label>
-            <select name="toId" required class="w-full p-2 border rounded">
+            <select name="toEmail" required class="w-full p-2 border rounded">
               <option value="">Selecciona...</option>
               ${participants
                 .map(
                   (p) => `
-                <option value="${p.id}">${p.name}</option>
+                <option value="${p.email}">${p.displayName !== p.email ? p.displayName : p.email}</option>
               `
                 )
                 .join("")}
             </select>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium mb-1">Monto</label>
-            <input 
-              type="number" 
-              name="amount" 
-              step="0.01" 
+            <input
+              type="number"
+              name="amount"
+              step="0.01"
               min="0.01"
-              required 
-              class="w-full p-2 border rounded" 
+              required
+              class="w-full p-2 border rounded"
               placeholder="0.00"
             >
           </div>
-          
+
           <div class="flex gap-2">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               class="flex-1 bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700 transition"
             >
               Guardar
             </button>
-            <button 
-              type="button" 
-              id="cancel-payment" 
+            <button
+              type="button"
+              id="cancel-payment"
               class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition"
             >
               Cancelar
@@ -88,7 +89,7 @@ export default function renderPaymentForm(
 }
 
 /**
- * Setup: Maneja el formulario de pagos
+ * Setup: Handles the payment form submission
  */
 export function setupPaymentForm(
   form: HTMLFormElement,
@@ -110,10 +111,10 @@ export function setupPaymentForm(
     }
 
     const formData = new FormData(form);
-    const fromId = formData.get("fromId") as string;
-    const toId = formData.get("toId") as string;
+    const fromEmail = formData.get("fromEmail") as string;
+    const toEmail = formData.get("toEmail") as string;
 
-    if (fromId === toId) {
+    if (fromEmail === toEmail) {
       alert("No puedes registrar un pago a la misma persona");
       return;
     }
@@ -127,8 +128,8 @@ export function setupPaymentForm(
       await store.addPayment(
         {
           sharedExpenseId: currentSharedExpenseId,
-          fromId,
-          toId,
+          fromEmail,
+          toEmail,
           amount: parseFloat(formData.get("amount") as string),
           date: new Date().toISOString(),
         } as Payment,
