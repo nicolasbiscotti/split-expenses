@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync } from "fs";
 // to test the script with Emulators set with export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 (unset FIRESTORE_EMULATOR_HOST):
 // FIREBASE_PROJECT_ID=the-project-id (required)
 // FIRESTORE_DATA_ID=development (required)
-// FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 
+// FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+// FIREBASE_SERVICE_ACCOUNT_KEY_PATH=
 // and run:
 // node scripts/firebase-admin-sdk/backup.js`
 
@@ -17,7 +18,7 @@ if (process.env.FIRESTORE_EMULATOR_HOST) {
   admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
 } else {
   const serviceAccount = JSON.parse(
-    readFileSync("./scripts/firebase-admin-sdk/serviceAccountKey.json", "utf8"),
+    readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH, "utf8"),
   );
   admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }

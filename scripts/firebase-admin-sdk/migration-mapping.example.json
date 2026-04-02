@@ -1,0 +1,21 @@
+{
+  "_comment": "Copy this file to migration-mapping.json (gitignored) and fill in your values.",
+
+  "creatorUid": "FIREBASE_UID_OF_CREATOR",
+
+  "participants": {
+    "OLD_PARTICIPANT_ID_1": {
+      "email": "creator@example.com",
+      "displayName": "Creator Name",
+      "uid": "FIREBASE_UID_OF_CREATOR"
+    },
+    "OLD_PARTICIPANT_ID_2": {
+      "email": "participant2@example.com",
+      "displayName": "Participant 2 Name"
+    },
+    "OLD_PARTICIPANT_ID_3": {
+      "email": "participant3@example.com",
+      "displayName": "Participant 3 Name"
+    }
+  }
+}

@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 // FIREBASE_PROJECT_ID=the-project-id (required)
 // FIRESTORE_DATA_ID=development (required)
 // FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 
+// FIREBASE_SERVICE_ACCOUNT_KEY_PATH
 // and run:
 // node scripts/firebase-admin-sdk/backup.js`
 
