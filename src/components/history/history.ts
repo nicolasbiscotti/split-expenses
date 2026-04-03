@@ -50,10 +50,10 @@ function renderExpensesSection(expenses: any[], participants: SharedExpenseParti
  * Render: Single expense item
  */
 function renderExpenseItem(expense: any, participants: SharedExpenseParticipant[]): string {
-  const payer = participants.find((p) => p.email === expense.payerEmail);
+  const payer = participants.find((p) => p.email === expense.paidByEmail);
   const payerName = payer
     ? (payer.displayName !== payer.email ? payer.displayName : payer.email)
-    : expense.payerEmail ?? "Desconocido";
+    : expense.paidByEmail ?? "Desconocido";
 
   return `
     <div class="flex justify-between items-center p-2 bg-gray-50 rounded">

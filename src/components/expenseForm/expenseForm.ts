@@ -19,7 +19,7 @@ export default function renderExpenseForm(
       <form id="expense-form" class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Quién pagó</label>
-          <select name="payerEmail" required class="w-full p-2 border rounded">
+          <select name="paidByEmail" required class="w-full p-2 border rounded">
             <option value="">Selecciona...</option>
             ${participants
               .map(
@@ -107,7 +107,7 @@ export function setupExpenseForm(
       await store.addExpense(
         {
           sharedExpenseId: currentSharedExpenseId,
-          payerEmail: formData.get("payerEmail") as string,
+          paidByEmail: formData.get("paidByEmail") as string,
           amount: parseFloat(formData.get("amount") as string),
           description: formData.get("description") as string,
           date: new Date().toISOString(),

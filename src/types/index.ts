@@ -20,8 +20,8 @@ export interface SharedExpenseParticipant {
 export interface Expense {
   id: string;
   sharedExpenseId: string;
-  adminUid: string;
-  payerEmail: string;
+  creatorUid: string;
+  paidByEmail: string;
   amount: number;
   description: string;
   date: string;
@@ -30,7 +30,7 @@ export interface Expense {
 export interface Payment {
   id: string;
   sharedExpenseId: string;
-  adminUid: string;
+  creatorUid: string;
   fromEmail: string;
   toEmail: string;
   amount: number;

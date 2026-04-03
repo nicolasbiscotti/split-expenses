@@ -13,8 +13,8 @@ export function calculateBalances(
   participants.forEach((p) => balances.set(p.email, -sharePerPerson));
 
   expenses.forEach((expense) => {
-    const current = balances.get(expense.payerEmail) ?? 0;
-    balances.set(expense.payerEmail, current + expense.amount);
+    const current = balances.get(expense.paidByEmail) ?? 0;
+    balances.set(expense.paidByEmail, current + expense.amount);
   });
 
   payments.forEach((payment) => {
