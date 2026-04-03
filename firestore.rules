@@ -80,15 +80,15 @@ service cloud.firestore {
           allow create: if isAuthenticated()
             && isSeParticipant()
             && (
-              request.resource.data.adminUid == request.auth.uid
-              || request.resource.data.payerEmail == request.auth.token.email
+              request.resource.data.creatorUid == request.auth.uid
+              || request.resource.data.paidByEmail == request.auth.token.email
             );
 
           // Update/Delete: group creator has full control; others only if they are the payer
           allow update, delete: if isAuthenticated()
             && (
-              resource.data.adminUid == request.auth.uid
-              || resource.data.payerEmail == request.auth.token.email
+              resource.data.creatorUid == request.auth.uid
+              || resource.data.paidByEmail == request.auth.token.email
             );
         }
 
@@ -102,14 +102,14 @@ service cloud.firestore {
           allow create: if isAuthenticated()
             && isSeParticipant()
             && (
-              request.resource.data.adminUid == request.auth.uid
+              request.resource.data.creatorUid == request.auth.uid
               || request.resource.data.fromEmail == request.auth.token.email
             );
 
           // Update/Delete: group creator has full control; others only if they are the sender
           allow update, delete: if isAuthenticated()
             && (
-              resource.data.adminUid == request.auth.uid
+              resource.data.creatorUid == request.auth.uid
               || resource.data.fromEmail == request.auth.token.email
             );
         }

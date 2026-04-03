@@ -101,32 +101,24 @@ function getExpensesCollectionPath(sharedExpenseId: string): string {
 
 export const expenseService = {
   async createExpense(expense: Omit<Expense, "id">): Promise<string> {
-    const collectionRef = collection(
-      db,
-      getExpensesCollectionPath(expense.sharedExpenseId)
+    const seRef = doc(db, sharedExpensesCollectionPath, expense.sharedExpenseId);
+    const newExpenseRef = doc(
+      collection(db, getExpensesCollectionPath(expense.sharedExpenseId))
     );
 
-    let docRef;
+    await runTransaction(db, async (transaction) => {
+      const seSnap = await transaction.get(seRef);
+      if (!seSnap.exists()) throw new Error("Shared expense not found");
 
-    await runTransaction(db, async () => {
-      const expenseList = await this.getExpenses(expense.sharedExpenseId);
+      const currentTotal = (seSnap.data().totalAmount as number) ?? 0;
 
-      const seTotalAmount = expenseList.reduce(
-        (total, e) => total + e.amount,
-        0
-      );
-
-      await sharedExpenseService.update(expense.sharedExpenseId, {
-        totalAmount: seTotalAmount + expense.amount,
-      });
-
-      docRef = await addDoc(collectionRef, {
-        ...expense,
-        createdAt: Timestamp.now(),
-      });
+      // Both writes go through the transaction — if the expense set is
+      // rejected by security rules, the totalAmount update is rolled back too.
+      transaction.update(seRef, { totalAmount: currentTotal + expense.amount });
+      transaction.set(newExpenseRef, { ...expense, createdAt: Timestamp.now() });
     });
 
-    return docRef!.id;
+    return newExpenseRef.id;
   },
 
   async getExpenses(sharedExpenseId: string): Promise<Expense[]> {
