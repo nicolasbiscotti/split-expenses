@@ -2,6 +2,7 @@ import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpenseParticipant } from "../../types";
 import { formatCurrency, formatDate } from "../../util/format";
+import { showToast } from "../../util/toast";
 
 /**
  * Render: Expense and payment history
@@ -145,10 +146,13 @@ export function setupHistory(
       btn.textContent = "⏳";
       try {
         await store.deleteExpense(id, "history");
-      } catch (_error) {
+      } catch (error) {
         btn.disabled = false;
         btn.textContent = "🗑️";
-        alert("Error al eliminar el gasto");
+        const message = (error as { code?: string }).code === "permission-denied"
+          ? "No tienes permiso para eliminar este gasto"
+          : "Error al eliminar el gasto";
+        showToast(message, "error");
       }
     }
   };
@@ -159,10 +163,13 @@ export function setupHistory(
       btn.textContent = "⏳";
       try {
         await store.deletePayment(id, "history");
-      } catch (_error) {
+      } catch (error) {
         btn.disabled = false;
         btn.textContent = "🗑️";
-        alert("Error al eliminar el pago");
+        const message = (error as { code?: string }).code === "permission-denied"
+          ? "No tienes permiso para eliminar este pago"
+          : "Error al eliminar el pago";
+        showToast(message, "error");
       }
     }
   };

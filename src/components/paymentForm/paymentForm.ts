@@ -106,7 +106,7 @@ export function setupPaymentForm(
 
     const currentSharedExpenseId = store.getCurrentSharedExpenseId();
     if (!currentSharedExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
+      showToast("No hay un gasto compartido seleccionado", "error");
       return;
     }
 
@@ -115,7 +115,7 @@ export function setupPaymentForm(
     const toEmail = formData.get("toEmail") as string;
 
     if (fromEmail === toEmail) {
-      alert("No puedes registrar un pago a la misma persona");
+      showToast("No puedes registrar un pago a la misma persona", "error");
       return;
     }
 
@@ -136,12 +136,15 @@ export function setupPaymentForm(
         "dashboard"
       );
       showToast("Pago registrado");
-    } catch (_error) {
+    } catch (error) {
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = "Guardar";
       }
-      alert("Error al registrar el pago");
+      const message = (error as { code?: string }).code === "permission-denied"
+        ? "No tienes permiso para registrar este gasto"
+        : "Error al registrar el pago";
+      showToast(message, "error");
     }
   });
 }

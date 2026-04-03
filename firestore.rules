@@ -11,19 +11,24 @@ service cloud.firestore {
         }
       }
 
+      function isAuthenticated() {
+        return request.auth != null;
+      }
+
       function isParticipant() {
-        return request.auth != null && 
-        (request.auth.token.email in resource.data.participantEmails || request.auth.uid in resource.data.participantUids);
+        return isAuthenticated() &&
+          (request.auth.token.email in resource.data.participantEmails ||
+           request.auth.uid in resource.data.participantUids);
       }
 
       function isCreator() {
-        return request.auth != null && request.auth.uid == resource.data.creatorUid;
+        return isAuthenticated() && request.auth.uid == resource.data.creatorUid;
       }
 
       // Helper: Check if the user's email is already in the invited list
       function isInvitedByEmail() {
-        return request.auth != null && 
-        request.auth.token.email in resource.data.participantEmails;
+        return isAuthenticated() &&
+          request.auth.token.email in resource.data.participantEmails;
       }
 
       // Helper: Ensure ONLY specific fields are being modified
@@ -40,52 +45,75 @@ service cloud.firestore {
 
       // Shared expenses (Groups)
       match /sharedExpenses/{seId} {
-        // Read if user's UID is in the participant list
+        // Read if user's UID or email is in the participant list
         allow read: if isParticipant();
 
         // Create if the user sets themselves as creator
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.creatorUid;
+        allow create: if isAuthenticated() && request.auth.uid == request.resource.data.creatorUid;
 
-        // Only creator can edit group settings or participants updating 
-        allow update: if ( isCreator() || ( isInvitedByEmail() && onlyUpdatingJoinFields() && isAddingOwnUid() ));
+        // Only creator can edit group settings; invited users can only join (add their own UID)
+        allow update: if isCreator() || (isInvitedByEmail() && onlyUpdatingJoinFields() && isAddingOwnUid());
 
         // Only creator can delete the group
         allow delete: if isCreator();
 
-        // Sub-collections: Expenses and Payments
+        // Fetch parent SE data — Firestore caches this per request,
+        // so a list query with N docs costs 1 billed get(), not N.
+        function parentSE() {
+          return get(/databases/$(database)/documents/environments/$(dataId)/sharedExpenses/$(seId)).data;
+        }
+
+        // Check caller's UID is in the parent SE's participant list.
+        // UID-based only: by the time a user reads sub-collections,
+        // invite resolution has already run and their UID is registered.
+        function isSeParticipant() {
+          return isAuthenticated() && request.auth.uid in parentSE().participantUids;
+        }
+
+        // Sub-collection: Expenses
         match /expenses/{docId} {
 
-          // Must be a participant to even see the records
-          allow read: if request.auth != null;
+          // Read: must be a registered participant of the parent SE
+          allow read: if isSeParticipant();
 
-          // Permission to Create:
-          // 1. User must be a participant.
-          // 2. User is either the Group Creator OR the Email matches their auth email.
-          allow create: if request.auth != null && request.resource.data.payerEmail == request.auth.token.email || request.resource.data.adminUid == request.auth.uid;
+          // Create: must be a participant AND either the group creator or recording own expense
+          allow create: if isAuthenticated()
+            && isSeParticipant()
+            && (
+              request.resource.data.adminUid == request.auth.uid
+              || request.resource.data.payerEmail == request.auth.token.email
+            );
 
-          // Permission to Update/Delete:
-          // 1. Group Creator has total control.
-          // 2. Participants can only edit/delete if their email matches the record.
-          allow update, delete: if request.auth != null && resource.data.payerEmail == request.auth.token.email || resource.data.adminUid == request.auth.uid;
+          // Update/Delete: group creator has full control; others only if they are the payer
+          allow update, delete: if isAuthenticated()
+            && (
+              resource.data.adminUid == request.auth.uid
+              || resource.data.payerEmail == request.auth.token.email
+            );
         }
 
-        // Sub-collections: Expenses and Payments
+        // Sub-collection: Payments
         match /payments/{docId} {
 
-          // Must be a participant to even see the records
-          allow read: if request.auth != null;
+          // Read: must be a registered participant of the parent SE
+          allow read: if isSeParticipant();
 
-          // Permission to Create:
-          // 1. User must be a participant.
-          // 2. User is either the Group Creator OR the Email matches their auth email.
-          allow create: if request.auth != null && request.resource.data.fromEmail == request.auth.token.email || request.resource.data.adminUid == request.auth.uid;
+          // Create: must be a participant AND either the group creator or recording own payment
+          allow create: if isAuthenticated()
+            && isSeParticipant()
+            && (
+              request.resource.data.adminUid == request.auth.uid
+              || request.resource.data.fromEmail == request.auth.token.email
+            );
 
-          // Permission to Update/Delete:
-          // 1. Group Creator has total control.
-          // 2. Participants can only edit/delete if their email matches the record.
-          allow update, delete: if request.auth != null && resource.data.fromEmail == request.auth.token.email || resource.data.adminUid == request.auth.uid;
+          // Update/Delete: group creator has full control; others only if they are the sender
+          allow update, delete: if isAuthenticated()
+            && (
+              resource.data.adminUid == request.auth.uid
+              || resource.data.fromEmail == request.auth.token.email
+            );
         }
-        
+
       }
     }
   }
