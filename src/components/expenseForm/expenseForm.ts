@@ -93,7 +93,7 @@ export function setupExpenseForm(
 
     const currentSharedExpenseId = store.getCurrentSharedExpenseId();
     if (!currentSharedExpenseId) {
-      alert("No hay un gasto compartido seleccionado");
+      showToast("No hay un gasto compartido seleccionado", "error");
       return;
     }
 
@@ -115,12 +115,15 @@ export function setupExpenseForm(
         "dashboard"
       );
       showToast("Gasto guardado");
-    } catch (_error) {
+    } catch (error) {
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = "Guardar";
       }
-      alert("Error al agregar el gasto");
+      const message = (error as { code?: string }).code === "permission-denied"
+        ? "No tienes permiso para agregar este gasto"
+        : "Error al agregar el gasto";
+      showToast(message, "error");
     }
   });
 }
