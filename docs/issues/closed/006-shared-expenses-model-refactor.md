@@ -2,6 +2,7 @@
 
 **Type:** todo
 **Opened:** 2026-04-02
+**Resolved:** 2026-04-03
 
 ## Description
 
@@ -57,7 +58,7 @@ Two field renames align the codebase with the proposal's naming and make the rul
 | `Payment.adminUid` | `Payment.creatorUid` | Same set |
 | `Expense.payerEmail` | `Expense.paidByEmail` | `types/index.ts`, `store.ts`, `databaseService.ts`, `expenseForm.ts`, `history.ts`, `calculations.ts`, `dashboard.ts` |
 
-**Effort:** Low — mechanical search-and-replace across ~7 files. Zero logic changes.  
+**Effort:** Low — mechanical search-and-replace across ~7 files. Zero logic changes.
 **Data migration required:** Yes — all existing expense and payment documents need the field renamed. The `migrate.js` script can be extended to handle this.
 
 **Also in this category:** Fix two real bugs in the current `firestore.rules`:
@@ -81,9 +82,9 @@ participants: { [email: string]: { displayName: string; uid: string | null; role
 
 **Files affected:** `types/index.ts`, `databaseService.ts`, `store.ts`, `state/AppState.ts`, `createStep2.ts`, `createStep3.ts`, `expenseForm.ts`, `paymentForm.ts`, `history.ts`, `dashboard.ts`, `debtList.ts`, `sharedExpenseList.ts`, `profile.ts`.
 
-**Effort:** Medium — every place that calls `.map()`, `.find()`, or `.filter()` on `participants` needs to change to `Object.entries()` / `Object.values()`. Roughly 12–15 call sites.  
-**Data migration required:** Yes — all existing SE documents need `participants` restructured.  
-**Benefit:** Deduplication by key, O(1) participant lookup, `role` field enables future permission tiers.  
+**Effort:** Medium — every place that calls `.map()`, `.find()`, or `.filter()` on `participants` needs to change to `Object.entries()` / `Object.values()`. Roughly 12–15 call sites.
+**Data migration required:** Yes — all existing SE documents need `participants` restructured.
+**Benefit:** Deduplication by key, O(1) participant lookup, `role` field enables future permission tiers.
 **Downside:** More verbose to iterate in TypeScript; the current array is idiomatic and works well.
 
 **Verdict on this change:** Worthwhile but not urgent. The array works correctly today. This is a quality-of-life improvement that pays off more as the app grows.
@@ -113,17 +114,26 @@ These items in the proposal are genuinely new features, not refactors:
 
 **Split the work into two tracks:**
 
-**Track A — Do before #005 (low risk, fixes real bugs):**
+**Track A — Do before notifications (low risk, fixes real bugs):**
 1. Fix the `firestore.rules` read permission hole and operator precedence bugs.
 2. Rename `adminUid` → `creatorUid` on Expense and Payment (code + data migration).
 3. Rename `payerEmail` → `paidByEmail` on Expense (code + data migration).
 
-Rationale: The rules bugs are security issues. The renames are mechanical and cost almost nothing. Doing them before #005 means the notification listener code uses the correct field names from day one.
+Rationale: The rules bugs are security issues. The renames are mechanical and cost almost nothing. Doing them before notifications means the listener code uses the correct field names from day one.
 
-**Track B — Defer until after #005:**
+**Track B — Defer until after notifications:**
 4. `participants` array → map structural change.
 5. All Category 4 new features.
 
-Rationale: The `participants` structure does not affect how notifications are built — the notification listener reads expense/payment documents, not the `participants` map. Deferring avoids a medium-effort refactor on the critical path to #005.
+Rationale: The `participants` structure does not affect how notifications are built. Deferring avoids a medium-effort refactor on the critical path to notifications.
 
-**Is the overall refactor worth it?** Yes for Track A (fixes bugs, zero-cost renames). Conditionally yes for Track B (worthwhile if the app grows to need role-based permissions or custom splits). Track B should be planned as its own issue once #005 is closed.
+**Is the overall refactor worth it?** Yes for Track A (fixes bugs, zero-cost renames). Conditionally yes for Track B (worthwhile if the app grows to need role-based permissions or custom splits). Track B should be planned as its own issue once notifications are shipped.
+
+## Resolution
+
+Analysis complete. Work split into actionable issues:
+
+- **Track A** → [#007](../open/007-fix-firestore-rules-security-bugs.md), [#008](../open/008-rename-adminuid-and-payeremail.md)
+- **Frontend prerequisites** → [#009](../open/009-frontend-optimizations.md)
+- **Notifications (re-opened)** → [#010](../open/010-in-app-notification-system.md)
+- **Track B** → [#011](../open/011-participants-array-to-map.md)

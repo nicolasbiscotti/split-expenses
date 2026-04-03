@@ -2,6 +2,7 @@
 
 **Type:** todo
 **Opened:** 2026-04-02
+**Resolved:** 2026-04-03
 
 ## Description
 
@@ -22,3 +23,14 @@ Notifications should be visible somewhere persistent in the app UI (e.g. a badge
 - **UI placement**: Badge on the bottom nav? A dedicated notifications panel/view? A toast queue?
 - **Read/unread state**: Does the user need to mark notifications as read, or are they dismissed automatically?
 - **Scope of listener**: Listening to all SEs the user belongs to could mean many active Firestore listeners. Consider a fan-out approach or a dedicated `notifications/{uid}` collection written to by the creating user (or Cloud Functions).
+
+## Resolution
+
+Issue restructured after sequencing analysis revealed prerequisite work. The open questions above are preserved and carried into the re-opened issue.
+
+Prerequisites identified and sequenced as separate issues before implementation:
+- #007 — fix `firestore.rules` security bugs (rules must be correct before listeners are built on top)
+- #008 — rename `adminUid` → `creatorUid` and `payerEmail` → `paidByEmail` (field names must be final before listener code is written)
+- #009 — frontend optimization patterns (bounded `onSnapshot` with `limit()` must be established before notification listeners are introduced)
+
+Re-opened as **[#010](../open/010-in-app-notification-system.md)** with full prerequisite context.
