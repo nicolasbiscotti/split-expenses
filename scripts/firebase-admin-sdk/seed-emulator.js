@@ -191,8 +191,19 @@ async function seed() {
   const expenses = buildExpenses(seId, NUM_EXPENSES);
   const payments = buildPayments(seId, NUM_PAYMENTS);
 
-  // Compute totalAmount from generated expenses
-  seDoc.totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // Compute SE aggregates from generated records
+  seDoc.totalAmount    = expenses.reduce((sum, e) => sum + e.amount, 0);
+  seDoc.expensesCount  = expenses.length;
+
+  const netPaid = {};
+  for (const exp of expenses) {
+    netPaid[exp.paidByEmail] = (netPaid[exp.paidByEmail] ?? 0) + exp.amount;
+  }
+  for (const pay of payments) {
+    netPaid[pay.fromEmail] = (netPaid[pay.fromEmail] ?? 0) + pay.amount;
+    netPaid[pay.toEmail]   = (netPaid[pay.toEmail]   ?? 0) - pay.amount;
+  }
+  seDoc.netPaid = netPaid;
 
   console.log(`\nCreating SE "${SE_NAME}" (id: ${seId})`);
   console.log(`  Expenses : ${NUM_EXPENSES}`);

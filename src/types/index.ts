@@ -75,6 +75,8 @@ export interface SharedExpense {
   participantUids: string[];
   participantEmails: string[];
   totalAmount: number;
+  expensesCount?: number;
+  netPaid?: Record<string, number>;
   createdAt: string;
   closedAt?: string;
   periodName?: string; // For recurring: "Enero 2025"

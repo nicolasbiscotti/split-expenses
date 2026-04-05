@@ -13,7 +13,7 @@ To resolve an issue: move the file to `closed/` and add a **Resolved** date + **
 | [006](closed/006-shared-expenses-model-refactor.md) | todo | closed | Evaluate shared-expenses-revised.md proposal (analysis complete → see #007–#011) |
 | [007](closed/007-fix-firestore-rules-security-bugs.md) | todo | closed | Fix firestore.rules: missing participant check on reads + operator precedence bugs |
 | [008](closed/008-rename-adminuid-and-payeremail.md) | todo | closed | Rename adminUid → creatorUid and payerEmail → paidByEmail (code + data migration) |
-| [009](open/009-frontend-optimizations.md) | todo | open | Frontend optimizations: bounded listeners, offline persistence, pagination |
+| [009](closed/009-frontend-optimizations.md) | todo | closed | Frontend optimizations: bounded listeners, offline persistence, pagination |
 | [010](open/010-in-app-notification-system.md) | todo | open | In-app notification system for expenses, payments, and group invites |
 | [011](open/011-participants-array-to-map.md) | todo | open | Refactor participants from array to map (Track B — after #010) |
 | [012](closed/012-reuse-list-components-in-form-views.md) | todo | closed | Reuse expense and payment list components in form views |

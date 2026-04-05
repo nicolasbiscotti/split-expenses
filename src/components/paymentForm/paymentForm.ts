@@ -1,7 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { Payment } from "../../types";
-import { calculateBalances, calculateDebts } from "../../util/calculations";
+import { calculateBalancesFromNetPaid, calculateDebts } from "../../util/calculations";
 import renderDebtList from "../dashboard/debtList";
 import { renderPaymentList } from "../history/paymentList";
 import { showToast } from "../../util/toast";
@@ -15,9 +15,9 @@ export default function renderPaymentForm(
 ): string {
   const currentId = store.getCurrentSharedExpenseId() ?? "";
   const participants = store.getParticipantsForSharedExpense(currentId);
-  const expenses = store.getExpenses();
   const payments = store.getPayments();
-  const balances = calculateBalances(participants, expenses, payments);
+  const se = store.getSharedExpense(currentId);
+  const balances = calculateBalancesFromNetPaid(participants, se?.totalAmount ?? 0, se?.netPaid ?? {});
   const debts = calculateDebts(balances);
 
   return `
