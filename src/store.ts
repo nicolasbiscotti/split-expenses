@@ -5,6 +5,7 @@ import {
   sharedExpenseService,
   userProfileService,
   contactService,
+  type FirestoreCursor,
 } from "./services/databaseService";
 import type AppState from "./state/AppState";
 import type {
@@ -26,6 +27,10 @@ export default class AppStore {
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
+  private expensesCursor: FirestoreCursor | null = null;
+  private hasMoreExpenses: boolean = false;
+  private paymentsCursor: FirestoreCursor | null = null;
+  private hasMorePayments: boolean = false;
   private state: AppState;
 
   constructor(state: AppState) {
@@ -88,6 +93,10 @@ export default class AppStore {
     this.payments = [];
     this.sharedExpenses = [];
     this.currentSharedExpenseId = null;
+    this.expensesCursor = null;
+    this.hasMoreExpenses = false;
+    this.paymentsCursor = null;
+    this.hasMorePayments = false;
     localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     this.state.notify(this);
   }
@@ -144,14 +153,23 @@ export default class AppStore {
     return [...this.expenses];
   }
 
+  getHasMoreExpenses(): boolean {
+    return this.hasMoreExpenses;
+  }
+
+  getHasMorePayments(): boolean {
+    return this.hasMorePayments;
+  }
+
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
     try {
       const se = this.sharedExpenses.find((s) => s.id === expense.sharedExpenseId);
       expense.creatorUid = se?.creatorUid ?? "";
-      const expenseId = await expenseService.createExpense(expense);
+      const { expenseId, totalAmount, expensesCount, netPaid } =
+        await expenseService.createExpense(expense);
       expense.id = expenseId;
       this.expenses.push(expense);
-      await this.syncSharedExpenseTotal(expense.sharedExpenseId);
+      this.patchLocalSE(expense.sharedExpenseId, { totalAmount, expensesCount, netPaid });
     } catch (error) {
       console.error("Failed to create expense:", error);
       throw error;
@@ -163,9 +181,10 @@ export default class AppStore {
   async deleteExpense(id: string, currentView: ViewType): Promise<void> {
     const sharedExpenseId = this.currentSharedExpenseId || "";
     try {
-      await expenseService.deleteExpense(id, sharedExpenseId);
+      const { totalAmount, expensesCount, netPaid } =
+        await expenseService.deleteExpense(id, sharedExpenseId);
       this.expenses = this.expenses.filter((e) => e.id !== id);
-      await this.syncSharedExpenseTotal(sharedExpenseId);
+      this.patchLocalSE(sharedExpenseId, { totalAmount, expensesCount, netPaid });
     } catch (error) {
       console.error("Failed to delete expense:", error);
       throw error;
@@ -174,11 +193,27 @@ export default class AppStore {
     }
   }
 
-  private async syncSharedExpenseTotal(sharedExpenseId: string): Promise<void> {
-    const newTotal = this.expenses
-      .filter((e) => e.sharedExpenseId === sharedExpenseId)
-      .reduce((sum, e) => sum + e.amount, 0);
-    await this.updateSharedExpense(sharedExpenseId, { totalAmount: newTotal });
+  async loadMoreExpenses(): Promise<void> {
+    const id = this.currentSharedExpenseId || "";
+    const page = await expenseService.getExpenses(id, this.expensesCursor);
+    this.expenses = [...this.expenses, ...page.data];
+    this.expensesCursor = page.cursor;
+    this.hasMoreExpenses = page.hasMore;
+    this.state.notify(this);
+  }
+
+  async loadMorePayments(): Promise<void> {
+    const id = this.currentSharedExpenseId || "";
+    const page = await paymentService.getPayments(id, this.paymentsCursor);
+    this.payments = [...this.payments, ...page.data];
+    this.paymentsCursor = page.cursor;
+    this.hasMorePayments = page.hasMore;
+    this.state.notify(this);
+  }
+
+  private patchLocalSE(id: string, updates: Partial<SharedExpense>): void {
+    const i = this.sharedExpenses.findIndex((se) => se.id === id);
+    if (i !== -1) this.sharedExpenses[i] = { ...this.sharedExpenses[i], ...updates };
   }
 
   // ==================== PAYMENTS ====================
@@ -190,9 +225,10 @@ export default class AppStore {
     try {
       const se = this.sharedExpenses.find((s) => s.id === payment.sharedExpenseId);
       payment.creatorUid = se?.creatorUid ?? "";
-      const paymentId = await paymentService.createPayment(payment);
+      const { paymentId, netPaid } = await paymentService.createPayment(payment);
       payment.id = paymentId;
       this.payments.push(payment);
+      this.patchLocalSE(payment.sharedExpenseId, { netPaid });
     } catch (error) {
       console.error("Failed to create payment:", error);
       throw error;
@@ -202,9 +238,11 @@ export default class AppStore {
   }
 
   async deletePayment(id: string, currentView: ViewType): Promise<void> {
+    const sharedExpenseId = this.currentSharedExpenseId || "";
     try {
-      await paymentService.deletePayment(id, this.currentSharedExpenseId || "");
+      const { netPaid } = await paymentService.deletePayment(id, sharedExpenseId);
       this.payments = this.payments.filter((p) => p.id !== id);
+      this.patchLocalSE(sharedExpenseId, { netPaid });
     } catch (error) {
       console.error("Failed to delete payment:", error);
       throw error;
@@ -238,6 +276,8 @@ export default class AppStore {
         participantUids: sharedExpense.participantUids,
         participantEmails: sharedExpense.participantEmails,
         totalAmount: sharedExpense.totalAmount,
+        expensesCount: 0,
+        netPaid: {},
         createdAt: sharedExpense.createdAt,
       });
       sharedExpense.id = sharedExpenseId;
@@ -276,6 +316,17 @@ export default class AppStore {
     return this.currentSharedExpenseId;
   }
 
+  clearCurrentSharedExpense(): void {
+    this.currentSharedExpenseId = null;
+    this.expenses = [];
+    this.expensesCursor = null;
+    this.hasMoreExpenses = false;
+    this.payments = [];
+    this.paymentsCursor = null;
+    this.hasMorePayments = false;
+    localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
+  }
+
   async setCurrentSharedExpenseId(id: string | null): Promise<void> {
     this.currentSharedExpenseId = id;
 
@@ -284,18 +335,26 @@ export default class AppStore {
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
       this.expenses = [];
+      this.expensesCursor = null;
+      this.hasMoreExpenses = false;
       this.payments = [];
+      this.paymentsCursor = null;
+      this.hasMorePayments = false;
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     }
   }
 
   private async loadExpensesAndPayments(): Promise<void> {
     const id = this.currentSharedExpenseId || "";
-    const [expenses, payments] = await Promise.all([
+    const [expPage, payPage] = await Promise.all([
       expenseService.getExpenses(id),
       paymentService.getPayments(id),
     ]);
-    this.expenses = expenses;
-    this.payments = payments;
+    this.expenses = expPage.data;
+    this.expensesCursor = expPage.cursor;
+    this.hasMoreExpenses = expPage.hasMore;
+    this.payments = payPage.data;
+    this.paymentsCursor = payPage.cursor;
+    this.hasMorePayments = payPage.hasMore;
   }
 }

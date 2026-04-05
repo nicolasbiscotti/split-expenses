@@ -16,6 +16,8 @@ import renderPaymentForm, {
 
 // History
 import renderHistory, { setupHistory } from "./components/history/history";
+import { setupExpenseList } from "./components/history/expenseList";
+import { setupPaymentList } from "./components/history/paymentList";
 
 // Navigation
 import bottomNavBar from "./components/menus/bottomNavBar";
@@ -184,17 +186,17 @@ function setupViewInteractions(
 
     case "add-expense": {
       const form = app.querySelector<HTMLFormElement>("#expense-form");
-      if (form) {
-        setupExpenseForm(form, state, store);
-      }
+      if (form) setupExpenseForm(form, state, store);
+      const expContainer = app.querySelector<HTMLElement>("#view-content");
+      if (expContainer) setupExpenseList(expContainer, store);
       break;
     }
 
     case "add-payment": {
       const form = app.querySelector<HTMLFormElement>("#payment-form");
-      if (form) {
-        setupPaymentForm(form, state, store);
-      }
+      if (form) setupPaymentForm(form, state, store);
+      const payContainer = app.querySelector<HTMLElement>("#view-content");
+      if (payContainer) setupPaymentList(payContainer, store);
       break;
     }
 

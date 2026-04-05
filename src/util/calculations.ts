@@ -1,32 +1,19 @@
-import type { SharedExpenseParticipant, Expense, Payment, Balance, Debt } from "../types";
+import type { SharedExpenseParticipant, Balance, Debt } from "../types";
 
-export function calculateBalances(
+/**
+ * Compute per-participant balances from the SE document's aggregate fields.
+ * balance[email] = netPaid[email] - totalAmount / N
+ * This is correct regardless of pagination — no expense/payment records needed.
+ */
+export function calculateBalancesFromNetPaid(
   participants: SharedExpenseParticipant[],
-  expenses: Expense[],
-  payments: Payment[]
+  totalAmount: number,
+  netPaid: Record<string, number>
 ): Balance[] {
-  const balances = new Map<string, number>();
-  participants.forEach((p) => balances.set(p.email, 0));
-
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const sharePerPerson = totalExpenses / participants.length;
-  participants.forEach((p) => balances.set(p.email, -sharePerPerson));
-
-  expenses.forEach((expense) => {
-    const current = balances.get(expense.paidByEmail) ?? 0;
-    balances.set(expense.paidByEmail, current + expense.amount);
-  });
-
-  payments.forEach((payment) => {
-    const fromBalance = balances.get(payment.fromEmail) ?? 0;
-    const toBalance = balances.get(payment.toEmail) ?? 0;
-    balances.set(payment.fromEmail, fromBalance + payment.amount);
-    balances.set(payment.toEmail, toBalance - payment.amount);
-  });
-
-  return Array.from(balances.entries()).map(([email, balance]) => ({
-    email,
-    balance: Math.round(balance * 100) / 100,
+  const sharePerPerson = participants.length > 0 ? totalAmount / participants.length : 0;
+  return participants.map((p) => ({
+    email: p.email,
+    balance: Math.round(((netPaid[p.email] ?? 0) - sharePerPerson) * 100) / 100,
   }));
 }
 

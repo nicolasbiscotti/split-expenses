@@ -2,9 +2,10 @@ import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { Expense } from "../../types";
 import { showToast } from "../../util/toast";
+import { renderExpenseList } from "../history/expenseList";
 
 /**
- * Render: Expense form
+ * Render: Expense form + expense list
  */
 export default function renderExpenseForm(
   _state: AppState,
@@ -12,8 +13,10 @@ export default function renderExpenseForm(
 ): string {
   const currentId = store.getCurrentSharedExpenseId() ?? "";
   const participants = store.getParticipantsForSharedExpense(currentId);
+  const expenses = store.getExpenses();
 
   return `
+    <div class="space-y-4">
     <div class="bg-white rounded-lg shadow p-6">
       <h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
       <form id="expense-form" class="space-y-4">
@@ -71,6 +74,8 @@ export default function renderExpenseForm(
           </button>
         </div>
       </form>
+    </div>
+    ${renderExpenseList(expenses, store.getHasMoreExpenses(), participants)}
     </div>
   `;
 }

@@ -1,7 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpenseParticipant } from "../../types";
-import { calculateBalances, calculateDebts } from "../../util/calculations";
+import { calculateBalancesFromNetPaid, calculateDebts } from "../../util/calculations";
 import { formatCurrency } from "../../util/format";
 import renderDebtList from "./debtList";
 
@@ -14,15 +14,15 @@ export default function renderDashboard(
 ): string {
   const currentId = store.getCurrentSharedExpenseId() ?? "";
   const participants = store.getParticipantsForSharedExpense(currentId);
-  const expenses = store.getExpenses();
-  const payments = store.getPayments();
-  const balances = calculateBalances(participants, expenses, payments);
+  const se = store.getSharedExpense(currentId);
+  const totalAmount = se?.totalAmount ?? 0;
+  const expensesCount = se?.expensesCount ?? store.getExpenses().length;
+  const balances = calculateBalancesFromNetPaid(participants, totalAmount, se?.netPaid ?? {});
   const debts = calculateDebts(balances);
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return `
     <div class="space-y-4">
-      ${renderTotalSummary(totalExpenses, expenses.length)}
+      ${renderTotalSummary(totalAmount, expensesCount)}
       ${renderBalancesList(balances, participants)}
       ${renderDebtList(debts, participants)}
     </div>

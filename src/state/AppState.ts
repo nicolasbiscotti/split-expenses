@@ -27,6 +27,9 @@ export default class AppState {
   }
 
   setCurrentView(view: ViewType, store: AppStore): void {
+    if (view === "shared-expense-list") {
+      store.clearCurrentSharedExpense();
+    }
     this.currentView = view;
     this.notify(store);
   }

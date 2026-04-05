@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import {
+  initializeFirestore,
+  connectFirestoreEmulator,
+  persistentLocalCache,
+} from "firebase/firestore";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
@@ -14,8 +18,11 @@ const firebaseConfig = {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
-export const db = getFirestore(app);
+// Initialize Firestore with persistent local cache — reads served from
+// IndexedDB cost zero and make cold starts render instantly.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache(),
+});
 
 // Initialize Auth
 export const auth = getAuth(app);

@@ -11,9 +11,13 @@ import {
   where,
   or,
   orderBy,
+  limit,
+  startAfter,
   Timestamp,
   runTransaction,
   arrayUnion,
+  type QueryDocumentSnapshot,
+  type DocumentData,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import type { User } from "firebase/auth";
@@ -26,6 +30,24 @@ import type {
   SharedExpense,
   SharedExpenseParticipant,
 } from "../types";
+
+// Standard page size used by all paginated queries and future onSnapshot listeners.
+export const PAGE_SIZE = 3;
+
+// Opaque cursor type — keeps Firebase types out of the store layer.
+export type FirestoreCursor = QueryDocumentSnapshot<DocumentData>;
+
+export type ExpensePage = {
+  data: Expense[];
+  cursor: FirestoreCursor | null;
+  hasMore: boolean;
+};
+
+export type PaymentPage = {
+  data: Payment[];
+  cursor: FirestoreCursor | null;
+  hasMore: boolean;
+};
 
 const DATA_ID = import.meta.env.VITE_FIRESTORE_DATA_ID;
 const BASE = `environments/${DATA_ID}`;
@@ -100,57 +122,96 @@ function getExpensesCollectionPath(sharedExpenseId: string): string {
 }
 
 export const expenseService = {
-  async createExpense(expense: Omit<Expense, "id">): Promise<string> {
+  async createExpense(expense: Omit<Expense, "id">): Promise<{
+    expenseId: string;
+    totalAmount: number;
+    expensesCount: number;
+    netPaid: Record<string, number>;
+  }> {
     const seRef = doc(db, sharedExpensesCollectionPath, expense.sharedExpenseId);
     const newExpenseRef = doc(
       collection(db, getExpensesCollectionPath(expense.sharedExpenseId))
     );
 
+    let totalAmount = 0;
+    let expensesCount = 0;
+    let netPaid: Record<string, number> = {};
+
     await runTransaction(db, async (transaction) => {
       const seSnap = await transaction.get(seRef);
       if (!seSnap.exists()) throw new Error("Shared expense not found");
 
-      const currentTotal = (seSnap.data().totalAmount as number) ?? 0;
+      const seData = seSnap.data();
+      totalAmount = ((seData.totalAmount as number) ?? 0) + expense.amount;
+      expensesCount = ((seData.expensesCount as number) ?? 0) + 1;
+      netPaid = { ...(seData.netPaid as Record<string, number> ?? {}) };
+      netPaid[expense.paidByEmail] = (netPaid[expense.paidByEmail] ?? 0) + expense.amount;
 
-      // Both writes go through the transaction — if the expense set is
-      // rejected by security rules, the totalAmount update is rolled back too.
-      transaction.update(seRef, { totalAmount: currentTotal + expense.amount });
+      transaction.update(seRef, { totalAmount, expensesCount, netPaid });
       transaction.set(newExpenseRef, { ...expense, createdAt: Timestamp.now() });
     });
 
-    return newExpenseRef.id;
+    return { expenseId: newExpenseRef.id, totalAmount, expensesCount, netPaid };
   },
 
-  async getExpenses(sharedExpenseId: string): Promise<Expense[]> {
-    if (sharedExpenseId === "") {
-      return Promise.resolve([]);
-    }
+  async getExpenses(
+    sharedExpenseId: string,
+    after?: FirestoreCursor | null
+  ): Promise<ExpensePage> {
+    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
 
-    const collectionRef = collection(
-      db,
-      getExpensesCollectionPath(sharedExpenseId)
-    );
+    const collectionRef = collection(db, getExpensesCollectionPath(sharedExpenseId));
+    const constraints = after
+      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
+      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
 
-    const querySnapshot = await getDocs(
-      query(collectionRef, orderBy("date", "desc"))
-    );
+    const snapshot = await getDocs(query(collectionRef, ...constraints));
+    const hasMore = snapshot.docs.length > PAGE_SIZE;
+    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
 
-    return querySnapshot.docs.map(
-      (d) =>
-        ({
-          id: d.id,
-          ...d.data(),
-        } as Expense)
-    );
+    return {
+      data: docs.map((d) => ({ id: d.id, ...d.data() } as Expense)),
+      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
+      hasMore,
+    };
   },
 
-  async deleteExpense(id: string, currentSharedExpenseId: string): Promise<void> {
+  async deleteExpense(id: string, currentSharedExpenseId: string): Promise<{
+    totalAmount: number;
+    expensesCount: number;
+    netPaid: Record<string, number>;
+  }> {
     if (currentSharedExpenseId === "") {
       return Promise.reject("No Current Shared Expense Selected");
     }
 
-    const ref = doc(db, getExpensesCollectionPath(currentSharedExpenseId), id);
-    await deleteDoc(ref);
+    const expenseRef = doc(db, getExpensesCollectionPath(currentSharedExpenseId), id);
+    const seRef = doc(db, sharedExpensesCollectionPath, currentSharedExpenseId);
+
+    let totalAmount = 0;
+    let expensesCount = 0;
+    let netPaid: Record<string, number> = {};
+
+    await runTransaction(db, async (transaction) => {
+      const [expSnap, seSnap] = await Promise.all([
+        transaction.get(expenseRef),
+        transaction.get(seRef),
+      ]);
+      if (!expSnap.exists()) throw new Error("Expense not found");
+      if (!seSnap.exists()) throw new Error("Shared expense not found");
+
+      const exp = expSnap.data() as Expense;
+      const seData = seSnap.data();
+      totalAmount = ((seData.totalAmount as number) ?? 0) - exp.amount;
+      expensesCount = Math.max(0, ((seData.expensesCount as number) ?? 0) - 1);
+      netPaid = { ...(seData.netPaid as Record<string, number> ?? {}) };
+      netPaid[exp.paidByEmail] = (netPaid[exp.paidByEmail] ?? 0) - exp.amount;
+
+      transaction.delete(expenseRef);
+      transaction.update(seRef, { totalAmount, expensesCount, netPaid });
+    });
+
+    return { totalAmount, expensesCount, netPaid };
   },
 };
 
@@ -165,46 +226,86 @@ function getPaymentsCollectionPath(sharedExpenseId: string): string {
 }
 
 export const paymentService = {
-  async createPayment(payment: Omit<Payment, "id">): Promise<string> {
-    const ref = collection(
-      db,
-      getPaymentsCollectionPath(payment.sharedExpenseId)
+  async createPayment(payment: Omit<Payment, "id">): Promise<{
+    paymentId: string;
+    netPaid: Record<string, number>;
+  }> {
+    const seRef = doc(db, sharedExpensesCollectionPath, payment.sharedExpenseId);
+    const newPaymentRef = doc(
+      collection(db, getPaymentsCollectionPath(payment.sharedExpenseId))
     );
 
-    const docRef = await addDoc(ref, {
-      ...payment,
-      createdAt: Timestamp.now(),
+    let netPaid: Record<string, number> = {};
+
+    await runTransaction(db, async (transaction) => {
+      const seSnap = await transaction.get(seRef);
+      if (!seSnap.exists()) throw new Error("Shared expense not found");
+
+      const seData = seSnap.data();
+      netPaid = { ...(seData.netPaid as Record<string, number> ?? {}) };
+      netPaid[payment.fromEmail] = (netPaid[payment.fromEmail] ?? 0) + payment.amount;
+      netPaid[payment.toEmail] = (netPaid[payment.toEmail] ?? 0) - payment.amount;
+
+      transaction.update(seRef, { netPaid });
+      transaction.set(newPaymentRef, { ...payment, createdAt: Timestamp.now() });
     });
-    return docRef.id;
+
+    return { paymentId: newPaymentRef.id, netPaid };
   },
 
-  async getPayments(sharedExpenseId: string): Promise<Payment[]> {
-    if (sharedExpenseId === "") {
-      return Promise.resolve([]);
-    }
+  async getPayments(
+    sharedExpenseId: string,
+    after?: FirestoreCursor | null
+  ): Promise<PaymentPage> {
+    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
 
     const ref = collection(db, getPaymentsCollectionPath(sharedExpenseId));
+    const constraints = after
+      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
+      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
 
-    const querySnapshot = await getDocs(
-      query(ref, orderBy("date", "desc"))
-    );
+    const snapshot = await getDocs(query(ref, ...constraints));
+    const hasMore = snapshot.docs.length > PAGE_SIZE;
+    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
 
-    return querySnapshot.docs.map(
-      (d) =>
-        ({
-          id: d.id,
-          ...d.data(),
-        } as Payment)
-    );
+    return {
+      data: docs.map((d) => ({ id: d.id, ...d.data() } as Payment)),
+      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
+      hasMore,
+    };
   },
 
-  async deletePayment(id: string, currentSharedExpenseId: string): Promise<void> {
+  async deletePayment(id: string, currentSharedExpenseId: string): Promise<{
+    netPaid: Record<string, number>;
+  }> {
     if (currentSharedExpenseId === "") {
       return Promise.reject("No Current Shared Expense Selected");
     }
 
-    const ref = doc(db, getPaymentsCollectionPath(currentSharedExpenseId), id);
-    await deleteDoc(ref);
+    const paymentRef = doc(db, getPaymentsCollectionPath(currentSharedExpenseId), id);
+    const seRef = doc(db, sharedExpensesCollectionPath, currentSharedExpenseId);
+
+    let netPaid: Record<string, number> = {};
+
+    await runTransaction(db, async (transaction) => {
+      const [paySnap, seSnap] = await Promise.all([
+        transaction.get(paymentRef),
+        transaction.get(seRef),
+      ]);
+      if (!paySnap.exists()) throw new Error("Payment not found");
+      if (!seSnap.exists()) throw new Error("Shared expense not found");
+
+      const pay = paySnap.data() as Payment;
+      const seData = seSnap.data();
+      netPaid = { ...(seData.netPaid as Record<string, number> ?? {}) };
+      netPaid[pay.fromEmail] = (netPaid[pay.fromEmail] ?? 0) - pay.amount;
+      netPaid[pay.toEmail] = (netPaid[pay.toEmail] ?? 0) + pay.amount;
+
+      transaction.delete(paymentRef);
+      transaction.update(seRef, { netPaid });
+    });
+
+    return { netPaid };
   },
 };
 

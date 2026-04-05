@@ -2,6 +2,7 @@
 
 **Type:** todo
 **Opened:** 2026-04-03
+**Resolved:** 2026-04-03
 
 ## Context
 
@@ -38,6 +39,14 @@ Extend `scripts/firebase-admin-sdk/migrate.js` or write a focused `rename-fields
 
 ## Related
 
-- Source analysis: [#006](../closed/006-shared-expenses-model-refactor.md)
-- Depends on: [#007](007-fix-firestore-rules-security-bugs.md) (rules must be correct before field names change)
-- Must be completed before: [#010](010-in-app-notification-system.md)
+- Source analysis: [#006](006-shared-expenses-model-refactor.md)
+- Depends on: [#007](007-fix-firestore-rules-security-bugs.md)
+- Must be completed before: [#010](../open/010-in-app-notification-system.md)
+
+## Resolution
+
+All renames applied across `src/types/index.ts`, `src/store.ts`, `src/services/databaseService.ts`, `src/util/calculations.ts`, `src/components/expenseForm/expenseForm.ts`, `src/components/history/history.ts`, and `firestore.rules`. Build passes with zero TypeScript errors and no remaining occurrences of the old field names.
+
+Data migration handled by `scripts/firebase-admin-sdk/rename-fields.js` — a new focused script (no mapping file required) that reads a backup JSON, renames the fields, converts numeric-keyed array objects to real arrays, and writes back via batched commits (500 ops/batch).
+
+Also fixed a related bug discovered during this work: the `createExpense` transaction in `databaseService.ts` was calling `updateDoc`/`addDoc` outside the transaction object, causing `totalAmount` to update even when the expense write was rejected by security rules. Replaced with proper `transaction.get`/`transaction.update`/`transaction.set` calls so both writes are truly atomic.
