@@ -11,9 +11,13 @@ import {
   where,
   or,
   orderBy,
+  limit,
+  startAfter,
   Timestamp,
   runTransaction,
   arrayUnion,
+  type QueryDocumentSnapshot,
+  type DocumentData,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import type { User } from "firebase/auth";
@@ -26,6 +30,24 @@ import type {
   SharedExpense,
   SharedExpenseParticipant,
 } from "../types";
+
+// Standard page size used by all paginated queries and future onSnapshot listeners.
+export const PAGE_SIZE = 3;
+
+// Opaque cursor type — keeps Firebase types out of the store layer.
+export type FirestoreCursor = QueryDocumentSnapshot<DocumentData>;
+
+export type ExpensePage = {
+  data: Expense[];
+  cursor: FirestoreCursor | null;
+  hasMore: boolean;
+};
+
+export type PaymentPage = {
+  data: Payment[];
+  cursor: FirestoreCursor | null;
+  hasMore: boolean;
+};
 
 const DATA_ID = import.meta.env.VITE_FIRESTORE_DATA_ID;
 const BASE = `environments/${DATA_ID}`;
@@ -121,27 +143,26 @@ export const expenseService = {
     return newExpenseRef.id;
   },
 
-  async getExpenses(sharedExpenseId: string): Promise<Expense[]> {
-    if (sharedExpenseId === "") {
-      return Promise.resolve([]);
-    }
+  async getExpenses(
+    sharedExpenseId: string,
+    after?: FirestoreCursor | null
+  ): Promise<ExpensePage> {
+    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
 
-    const collectionRef = collection(
-      db,
-      getExpensesCollectionPath(sharedExpenseId)
-    );
+    const collectionRef = collection(db, getExpensesCollectionPath(sharedExpenseId));
+    const constraints = after
+      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
+      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
 
-    const querySnapshot = await getDocs(
-      query(collectionRef, orderBy("date", "desc"))
-    );
+    const snapshot = await getDocs(query(collectionRef, ...constraints));
+    const hasMore = snapshot.docs.length > PAGE_SIZE;
+    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
 
-    return querySnapshot.docs.map(
-      (d) =>
-        ({
-          id: d.id,
-          ...d.data(),
-        } as Expense)
-    );
+    return {
+      data: docs.map((d) => ({ id: d.id, ...d.data() } as Expense)),
+      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
+      hasMore,
+    };
   },
 
   async deleteExpense(id: string, currentSharedExpenseId: string): Promise<void> {
@@ -178,24 +199,26 @@ export const paymentService = {
     return docRef.id;
   },
 
-  async getPayments(sharedExpenseId: string): Promise<Payment[]> {
-    if (sharedExpenseId === "") {
-      return Promise.resolve([]);
-    }
+  async getPayments(
+    sharedExpenseId: string,
+    after?: FirestoreCursor | null
+  ): Promise<PaymentPage> {
+    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
 
     const ref = collection(db, getPaymentsCollectionPath(sharedExpenseId));
+    const constraints = after
+      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
+      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
 
-    const querySnapshot = await getDocs(
-      query(ref, orderBy("date", "desc"))
-    );
+    const snapshot = await getDocs(query(ref, ...constraints));
+    const hasMore = snapshot.docs.length > PAGE_SIZE;
+    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
 
-    return querySnapshot.docs.map(
-      (d) =>
-        ({
-          id: d.id,
-          ...d.data(),
-        } as Payment)
-    );
+    return {
+      data: docs.map((d) => ({ id: d.id, ...d.data() } as Payment)),
+      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
+      hasMore,
+    };
   },
 
   async deletePayment(id: string, currentSharedExpenseId: string): Promise<void> {

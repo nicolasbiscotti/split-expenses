@@ -5,6 +5,7 @@ import {
   sharedExpenseService,
   userProfileService,
   contactService,
+  type FirestoreCursor,
 } from "./services/databaseService";
 import type AppState from "./state/AppState";
 import type {
@@ -26,6 +27,10 @@ export default class AppStore {
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
+  private expensesCursor: FirestoreCursor | null = null;
+  private hasMoreExpenses: boolean = false;
+  private paymentsCursor: FirestoreCursor | null = null;
+  private hasMorePayments: boolean = false;
   private state: AppState;
 
   constructor(state: AppState) {
@@ -88,6 +93,10 @@ export default class AppStore {
     this.payments = [];
     this.sharedExpenses = [];
     this.currentSharedExpenseId = null;
+    this.expensesCursor = null;
+    this.hasMoreExpenses = false;
+    this.paymentsCursor = null;
+    this.hasMorePayments = false;
     localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     this.state.notify(this);
   }
@@ -144,6 +153,14 @@ export default class AppStore {
     return [...this.expenses];
   }
 
+  getHasMoreExpenses(): boolean {
+    return this.hasMoreExpenses;
+  }
+
+  getHasMorePayments(): boolean {
+    return this.hasMorePayments;
+  }
+
   async addExpense(expense: Expense, currentView: ViewType): Promise<void> {
     try {
       const se = this.sharedExpenses.find((s) => s.id === expense.sharedExpenseId);
@@ -172,6 +189,24 @@ export default class AppStore {
     } finally {
       this.state.setCurrentView(currentView, this);
     }
+  }
+
+  async loadMoreExpenses(): Promise<void> {
+    const id = this.currentSharedExpenseId || "";
+    const page = await expenseService.getExpenses(id, this.expensesCursor);
+    this.expenses = [...this.expenses, ...page.data];
+    this.expensesCursor = page.cursor;
+    this.hasMoreExpenses = page.hasMore;
+    this.state.notify(this);
+  }
+
+  async loadMorePayments(): Promise<void> {
+    const id = this.currentSharedExpenseId || "";
+    const page = await paymentService.getPayments(id, this.paymentsCursor);
+    this.payments = [...this.payments, ...page.data];
+    this.paymentsCursor = page.cursor;
+    this.hasMorePayments = page.hasMore;
+    this.state.notify(this);
   }
 
   private async syncSharedExpenseTotal(sharedExpenseId: string): Promise<void> {
@@ -284,18 +319,26 @@ export default class AppStore {
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
       this.expenses = [];
+      this.expensesCursor = null;
+      this.hasMoreExpenses = false;
       this.payments = [];
+      this.paymentsCursor = null;
+      this.hasMorePayments = false;
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     }
   }
 
   private async loadExpensesAndPayments(): Promise<void> {
     const id = this.currentSharedExpenseId || "";
-    const [expenses, payments] = await Promise.all([
+    const [expPage, payPage] = await Promise.all([
       expenseService.getExpenses(id),
       paymentService.getPayments(id),
     ]);
-    this.expenses = expenses;
-    this.payments = payments;
+    this.expenses = expPage.data;
+    this.expensesCursor = expPage.cursor;
+    this.hasMoreExpenses = expPage.hasMore;
+    this.payments = payPage.data;
+    this.paymentsCursor = payPage.cursor;
+    this.hasMorePayments = payPage.hasMore;
   }
 }

@@ -16,3 +16,4 @@ To resolve an issue: move the file to `closed/` and add a **Resolved** date + **
 | [009](open/009-frontend-optimizations.md) | todo | open | Frontend optimizations: bounded listeners, offline persistence, pagination |
 | [010](open/010-in-app-notification-system.md) | todo | open | In-app notification system for expenses, payments, and group invites |
 | [011](open/011-participants-array-to-map.md) | todo | open | Refactor participants from array to map (Track B — after #010) |
+| [012](closed/012-reuse-list-components-in-form-views.md) | todo | closed | Reuse expense and payment list components in form views |

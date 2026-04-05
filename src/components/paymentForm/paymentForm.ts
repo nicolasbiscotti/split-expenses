@@ -3,6 +3,7 @@ import type AppStore from "../../store";
 import type { Payment } from "../../types";
 import { calculateBalances, calculateDebts } from "../../util/calculations";
 import renderDebtList from "../dashboard/debtList";
+import { renderPaymentList } from "../history/paymentList";
 import { showToast } from "../../util/toast";
 
 /**
@@ -84,6 +85,7 @@ export default function renderPaymentForm(
       </div>
 
       ${renderDebtList(debts, participants)}
+      ${renderPaymentList(payments, store.getHasMorePayments(), participants)}
     </div>
   `;
 }
