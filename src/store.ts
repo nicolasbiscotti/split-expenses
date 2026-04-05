@@ -185,6 +185,9 @@ export default class AppStore {
         await expenseService.deleteExpense(id, sharedExpenseId);
       this.expenses = this.expenses.filter((e) => e.id !== id);
       this.patchLocalSE(sharedExpenseId, { totalAmount, expensesCount, netPaid });
+      if (this.expenses.length === 0 && this.hasMoreExpenses) {
+        await this.loadMoreExpenses();
+      }
     } catch (error) {
       console.error("Failed to delete expense:", error);
       throw error;
@@ -243,6 +246,9 @@ export default class AppStore {
       const { netPaid } = await paymentService.deletePayment(id, sharedExpenseId);
       this.payments = this.payments.filter((p) => p.id !== id);
       this.patchLocalSE(sharedExpenseId, { netPaid });
+      if (this.payments.length === 0 && this.hasMorePayments) {
+        await this.loadMorePayments();
+      }
     } catch (error) {
       console.error("Failed to delete payment:", error);
       throw error;

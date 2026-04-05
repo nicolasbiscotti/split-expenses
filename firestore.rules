@@ -34,8 +34,13 @@ service cloud.firestore {
       // Helper: Ensure ONLY specific fields are being modified
       function onlyUpdatingJoinFields() {
         let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-        // Participants can only touch 'participantUids' and 'participants'
-        return affectedKeys.hasOnly(['participantUids', 'participants', 'totalAmount']);
+        return affectedKeys.hasOnly(['participantUids', 'participants']);
+      }
+
+      // Helper: Ensure ONLY aggregate fields updated by expense/payment transactions are modified
+      function onlyUpdatingAggregateFields() {
+        let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+        return affectedKeys.hasOnly(['totalAmount', 'expensesCount', 'netPaid']);
       }
 
       // Helper: Verify the user is adding THEIR OWN UID and not someone else's
@@ -51,8 +56,12 @@ service cloud.firestore {
         // Create if the user sets themselves as creator
         allow create: if isAuthenticated() && request.auth.uid == request.resource.data.creatorUid;
 
-        // Only creator can edit group settings; invited users can only join (add their own UID)
-        allow update: if isCreator() || (isInvitedByEmail() && onlyUpdatingJoinFields() && isAddingOwnUid());
+        // Creator: full update access
+        // Invited user joining: can add their own UID (invite resolution)
+        // Any participant: can update aggregate fields written by expense/payment transactions
+        allow update: if isCreator()
+          || (isInvitedByEmail() && onlyUpdatingJoinFields() && isAddingOwnUid())
+          || (isParticipant() && onlyUpdatingAggregateFields());
 
         // Only creator can delete the group
         allow delete: if isCreator();
