@@ -17,3 +17,6 @@ To resolve an issue: move the file to `closed/` and add a **Resolved** date + **
 | [010](open/010-in-app-notification-system.md) | todo | open | In-app notification system for expenses, payments, and group invites |
 | [011](open/011-participants-array-to-map.md) | todo | open | Refactor participants from array to map (Track B — after #010) |
 | [012](closed/012-reuse-list-components-in-form-views.md) | todo | closed | Reuse expense and payment list components in form views |
+| [013](closed/013-firestore-rules-missing-aggregate-fields.md) | bug | closed | Non-creator participants cannot create or delete expenses and payments |
+| [014](open/014-automated-test-suite.md) | todo | open | Automated test suite (Vitest + Firestore rules tests) |
+| [015](closed/015-load-more-hidden-after-deleting-full-page.md) | bug | closed | "Cargar más" button disappears after deleting all documents on the current page |

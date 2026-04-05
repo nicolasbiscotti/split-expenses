@@ -144,7 +144,7 @@ export function setupPaymentForm(
         submitButton.textContent = "Guardar";
       }
       const message = (error as { code?: string }).code === "permission-denied"
-        ? "No tienes permiso para registrar este gasto"
+        ? "No tienes permiso para registrar este pago"
         : "Error al registrar el pago";
       showToast(message, "error");
     }
