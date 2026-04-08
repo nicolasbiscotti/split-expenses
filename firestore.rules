@@ -79,6 +79,11 @@ service cloud.firestore {
           return isAuthenticated() && request.auth.uid in parentSE().participantUids;
         }
 
+        // Allow any participant to update only the unreadBy field (marking notifications read)
+        function onlyUpdatingUnreadByField() {
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadBy']);
+        }
+
         // Sub-collection: Expenses
         match /expenses/{docId} {
 
@@ -93,8 +98,15 @@ service cloud.firestore {
               || request.resource.data.paidByEmail == request.auth.token.email
             );
 
-          // Update/Delete: group creator has full control; others only if they are the payer
-          allow update, delete: if isAuthenticated()
+          // Update: group creator or payer has full control; any participant can clear unreadBy
+          allow update: if isAuthenticated()
+            && (
+              resource.data.creatorUid == request.auth.uid
+              || resource.data.paidByEmail == request.auth.token.email
+              || (isSeParticipant() && onlyUpdatingUnreadByField())
+            );
+
+          allow delete: if isAuthenticated()
             && (
               resource.data.creatorUid == request.auth.uid
               || resource.data.paidByEmail == request.auth.token.email
@@ -115,8 +127,15 @@ service cloud.firestore {
               || request.resource.data.fromEmail == request.auth.token.email
             );
 
-          // Update/Delete: group creator has full control; others only if they are the sender
-          allow update, delete: if isAuthenticated()
+          // Update: group creator or sender has full control; any participant can clear unreadBy
+          allow update: if isAuthenticated()
+            && (
+              resource.data.creatorUid == request.auth.uid
+              || resource.data.fromEmail == request.auth.token.email
+              || (isSeParticipant() && onlyUpdatingUnreadByField())
+            );
+
+          allow delete: if isAuthenticated()
             && (
               resource.data.creatorUid == request.auth.uid
               || resource.data.fromEmail == request.auth.token.email

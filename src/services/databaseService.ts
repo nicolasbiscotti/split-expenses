@@ -11,13 +11,15 @@ import {
   where,
   or,
   orderBy,
-  limit,
+  limit as firestoreLimit,
+  onSnapshot,
   startAfter,
   Timestamp,
   runTransaction,
   arrayUnion,
-  type QueryDocumentSnapshot,
-  type DocumentData,
+  arrayRemove,
+  writeBatch,
+  type DocumentChangeType,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import type { User } from "firebase/auth";
@@ -29,25 +31,11 @@ import type {
   UserProfile,
   SharedExpense,
   SharedExpenseParticipant,
+  AppNotification,
 } from "../types";
 
-// Standard page size used by all paginated queries and future onSnapshot listeners.
+// Standard page size used by all paginated queries and listeners.
 export const PAGE_SIZE = 3;
-
-// Opaque cursor type — keeps Firebase types out of the store layer.
-export type FirestoreCursor = QueryDocumentSnapshot<DocumentData>;
-
-export type ExpensePage = {
-  data: Expense[];
-  cursor: FirestoreCursor | null;
-  hasMore: boolean;
-};
-
-export type PaymentPage = {
-  data: Payment[];
-  cursor: FirestoreCursor | null;
-  hasMore: boolean;
-};
 
 const DATA_ID = import.meta.env.VITE_FIRESTORE_DATA_ID;
 const BASE = `environments/${DATA_ID}`;
@@ -121,6 +109,40 @@ function getExpensesCollectionPath(sharedExpenseId: string): string {
   return `${BASE}/sharedExpenses/${sharedExpenseId}/${EXPENSES_COLLECTION_NAME}`;
 }
 
+// Callback type for data listeners: receives the current page of items,
+// whether more exist, and the raw doc changes for notification processing.
+export type DataListenerCallback<T> = (
+  items: T[],
+  hasMore: boolean,
+  changes: Array<{ type: DocumentChangeType; item: T }>
+) => void;
+
+export function startExpensesListener(
+  seId: string,
+  limitCount: number,
+  onUpdate: DataListenerCallback<Expense>
+): () => void {
+  const q = query(
+    collection(db, getExpensesCollectionPath(seId)),
+    orderBy("date", "desc"),
+    firestoreLimit(limitCount + 1) // N+1 to detect hasMore
+  );
+  return onSnapshot(q, (snap) => {
+    const hasMore = snap.docs.length > limitCount;
+    const docs = hasMore ? snap.docs.slice(0, limitCount) : snap.docs;
+    const docIds = new Set(docs.map((d) => d.id));
+    const items = docs.map((d) => ({ id: d.id, ...d.data() } as Expense));
+    const changes = snap
+      .docChanges()
+      .filter((c) => docIds.has(c.doc.id))
+      .map((c) => ({
+        type: c.type,
+        item: { id: c.doc.id, ...c.doc.data() } as Expense,
+      }));
+    onUpdate(items, hasMore, changes);
+  });
+}
+
 export const expenseService = {
   async createExpense(expense: Omit<Expense, "id">): Promise<{
     expenseId: string;
@@ -147,33 +169,18 @@ export const expenseService = {
       netPaid = { ...(seData.netPaid as Record<string, number> ?? {}) };
       netPaid[expense.paidByEmail] = (netPaid[expense.paidByEmail] ?? 0) + expense.amount;
 
+      const participantUids = (seData.participantUids ?? []) as string[];
+      const unreadBy = participantUids.filter((uid: string) => uid !== expense.recordedByUid);
+
       transaction.update(seRef, { totalAmount, expensesCount, netPaid });
-      transaction.set(newExpenseRef, { ...expense, createdAt: Timestamp.now() });
+      transaction.set(newExpenseRef, {
+        ...expense,
+        createdAt: Timestamp.now(),
+        unreadBy,
+      });
     });
 
     return { expenseId: newExpenseRef.id, totalAmount, expensesCount, netPaid };
-  },
-
-  async getExpenses(
-    sharedExpenseId: string,
-    after?: FirestoreCursor | null
-  ): Promise<ExpensePage> {
-    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
-
-    const collectionRef = collection(db, getExpensesCollectionPath(sharedExpenseId));
-    const constraints = after
-      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
-      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
-
-    const snapshot = await getDocs(query(collectionRef, ...constraints));
-    const hasMore = snapshot.docs.length > PAGE_SIZE;
-    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
-
-    return {
-      data: docs.map((d) => ({ id: d.id, ...d.data() } as Expense)),
-      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
-      hasMore,
-    };
   },
 
   async deleteExpense(id: string, currentSharedExpenseId: string): Promise<{
@@ -225,6 +232,32 @@ function getPaymentsCollectionPath(sharedExpenseId: string): string {
   return `${BASE}/sharedExpenses/${sharedExpenseId}/${PAYMENTS_COLLECTION_NAME}`;
 }
 
+export function startPaymentsListener(
+  seId: string,
+  limitCount: number,
+  onUpdate: DataListenerCallback<Payment>
+): () => void {
+  const q = query(
+    collection(db, getPaymentsCollectionPath(seId)),
+    orderBy("date", "desc"),
+    firestoreLimit(limitCount + 1)
+  );
+  return onSnapshot(q, (snap) => {
+    const hasMore = snap.docs.length > limitCount;
+    const docs = hasMore ? snap.docs.slice(0, limitCount) : snap.docs;
+    const docIds = new Set(docs.map((d) => d.id));
+    const items = docs.map((d) => ({ id: d.id, ...d.data() } as Payment));
+    const changes = snap
+      .docChanges()
+      .filter((c) => docIds.has(c.doc.id))
+      .map((c) => ({
+        type: c.type,
+        item: { id: c.doc.id, ...c.doc.data() } as Payment,
+      }));
+    onUpdate(items, hasMore, changes);
+  });
+}
+
 export const paymentService = {
   async createPayment(payment: Omit<Payment, "id">): Promise<{
     paymentId: string;
@@ -246,33 +279,18 @@ export const paymentService = {
       netPaid[payment.fromEmail] = (netPaid[payment.fromEmail] ?? 0) + payment.amount;
       netPaid[payment.toEmail] = (netPaid[payment.toEmail] ?? 0) - payment.amount;
 
+      const participantUids = (seData.participantUids ?? []) as string[];
+      const unreadBy = participantUids.filter((uid: string) => uid !== payment.recordedByUid);
+
       transaction.update(seRef, { netPaid });
-      transaction.set(newPaymentRef, { ...payment, createdAt: Timestamp.now() });
+      transaction.set(newPaymentRef, {
+        ...payment,
+        createdAt: Timestamp.now(),
+        unreadBy,
+      });
     });
 
     return { paymentId: newPaymentRef.id, netPaid };
-  },
-
-  async getPayments(
-    sharedExpenseId: string,
-    after?: FirestoreCursor | null
-  ): Promise<PaymentPage> {
-    if (sharedExpenseId === "") return { data: [], cursor: null, hasMore: false };
-
-    const ref = collection(db, getPaymentsCollectionPath(sharedExpenseId));
-    const constraints = after
-      ? [orderBy("date", "desc"), startAfter(after), limit(PAGE_SIZE + 1)]
-      : [orderBy("date", "desc"), limit(PAGE_SIZE + 1)];
-
-    const snapshot = await getDocs(query(ref, ...constraints));
-    const hasMore = snapshot.docs.length > PAGE_SIZE;
-    const docs = hasMore ? snapshot.docs.slice(0, PAGE_SIZE) : snapshot.docs;
-
-    return {
-      data: docs.map((d) => ({ id: d.id, ...d.data() } as Payment)),
-      cursor: docs.length > 0 ? docs[docs.length - 1] : null,
-      hasMore,
-    };
   },
 
   async deletePayment(id: string, currentSharedExpenseId: string): Promise<{
@@ -315,6 +333,15 @@ export const paymentService = {
 
 const sharedExpensesCollectionPath = `${BASE}/sharedExpenses`;
 
+export function startSeListener(
+  seId: string,
+  onUpdate: (se: SharedExpense) => void
+): () => void {
+  return onSnapshot(doc(db, sharedExpensesCollectionPath, seId), (snap) => {
+    if (snap.exists()) onUpdate({ id: snap.id, ...snap.data() } as SharedExpense);
+  });
+}
+
 export const sharedExpenseService = {
   create: async (data: Omit<SharedExpense, "id">): Promise<string> => {
     const ref = collection(db, sharedExpensesCollectionPath);
@@ -327,19 +354,12 @@ export const sharedExpenseService = {
     const snapshot = await getDocs(
       query(
         ref,
-        or( where("participantUids", "array-contains", uid),where("participantEmails", "array-contains", email)),
+        or(
+          where("participantUids", "array-contains", uid),
+          where("participantEmails", "array-contains", email)
+        ),
         orderBy("createdAt", "desc")
       )
-    );
-    return snapshot.docs.map(
-      (d) => ({ id: d.id, ...d.data() } as SharedExpense)
-    );
-  },
-
-  getByParticipantEmail: async (uid: string, email: string): Promise<SharedExpense[]> => {
-    const ref = collection(db, sharedExpensesCollectionPath);
-    const snapshot = await getDocs(
-      query(ref, or( where("participantUids", "array-contains", uid),where("participantEmails", "array-contains", email)))
     );
     return snapshot.docs.map(
       (d) => ({ id: d.id, ...d.data() } as SharedExpense)
@@ -375,3 +395,27 @@ export const sharedExpenseService = {
 };
 
 // --------------------------------------------------
+
+// Notification Operations
+
+export async function markNotificationsReadInDb(
+  notifications: AppNotification[],
+  currentUserUid: string
+): Promise<void> {
+  if (notifications.length === 0) return;
+  const batch = writeBatch(db);
+  for (const n of notifications) {
+    const collName = n.type === "expense_added" ? "expenses" : "payments";
+    const ref = doc(
+      db,
+      `${BASE}/sharedExpenses/${n.seId}/${collName}/${n.id}`
+    );
+    batch.update(ref, { unreadBy: arrayRemove(currentUserUid) });
+  }
+  await batch.commit();
+}
+
+// --------------------------------------------------
+
+// Kept for compatibility with any existing imports; can be removed when unused.
+export { startAfter };

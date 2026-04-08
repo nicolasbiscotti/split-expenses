@@ -8,7 +8,8 @@ import type { SharedExpense } from "../../types";
  */
 export default function bottomNavBar(
   state: AppState,
-  currentSharedExpense: SharedExpense | null | undefined
+  currentSharedExpense: SharedExpense | null | undefined,
+  unreadCount: number = 0
 ): string {
   const currentView = state.getCurrentView();
   const isClosed = currentSharedExpense?.status === "closed";
@@ -49,13 +50,20 @@ export default function bottomNavBar(
           <span class="text-xs ${isClosed ? "opacity-50" : ""}">Pago</span>
         </button>
         
-        <button 
-          onclick="setView('history')" 
+        <button
+          onclick="setView('history')"
           class="flex flex-col items-center ${
             currentView === "history" ? "text-blue-600" : "text-gray-600"
           }"
         >
-          <span class="text-2xl">📜</span>
+          <span class="relative inline-block">
+            <span class="text-2xl">📜</span>
+            ${unreadCount > 0
+              ? `<span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1rem] h-4 flex items-center justify-center px-1">
+                   ${unreadCount > 9 ? "9+" : unreadCount}
+                 </span>`
+              : ""}
+          </span>
           <span class="text-xs">Historial</span>
         </button>
         

@@ -82,9 +82,42 @@ function renderList(sharedExpenses: any[], store: AppStore, avatarHtml: string):
   `;
 }
 
-function renderSharedExpenseCard(sharedExpense: any, _store: AppStore): string {
+function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
+  const isPending = store.isPendingInvite(sharedExpense);
   const totalAmount = sharedExpense.totalAmount;
   const participantCount = sharedExpense.participants?.length ?? 0;
+
+  if (isPending) {
+    return `
+      <div
+        class="shared-expense-card bg-amber-50 border border-amber-200 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
+        data-expense-id="${sharedExpense.id}"
+        data-pending-invite="true"
+      >
+        <div class="flex justify-between items-start mb-2">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm">📬</span>
+              <span class="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                Invitación pendiente
+              </span>
+            </div>
+            <h3 class="font-bold text-lg">${sharedExpense.name}</h3>
+            ${
+              sharedExpense.description
+                ? `<p class="text-sm text-gray-600">${sharedExpense.description}</p>`
+                : ""
+            }
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
+          <span>👥 ${participantCount} participante${participantCount !== 1 ? "s" : ""}</span>
+          <span class="text-xs text-amber-600 font-medium">Toca para ver →</span>
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div
@@ -165,9 +198,15 @@ export function setupSharedExpenseList(
     const card = (e.target as HTMLElement).closest<HTMLElement>(
       ".shared-expense-card"
     );
-    if (card) {
-      const expenseId = card.getAttribute("data-expense-id");
-      if (expenseId) handleSelectSharedExpense(expenseId, card);
+    if (!card) return;
+    const expenseId = card.getAttribute("data-expense-id");
+    if (!expenseId) return;
+
+    if (card.dataset.pendingInvite === "true") {
+      state.setPendingInviteSeId(expenseId);
+      state.setCurrentView("invite-detail", store);
+    } else {
+      handleSelectSharedExpense(expenseId, card);
     }
   });
 }

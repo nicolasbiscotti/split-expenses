@@ -130,30 +130,43 @@ function pick(arr) {
 // ---------------------------------------------------------------------------
 
 function buildExpenses(seId, count) {
-  return Array.from({ length: count }, (_, i) => ({
-    sharedExpenseId: seId,
-    creatorUid:  CREATOR.uid,
-    paidByEmail: pick(PARTICIPANTS).email,
-    amount:      randomBetween(1000, 50000) * 10,  // e.g. $10,000 – $500,000
-    description: EXPENSE_DESCRIPTIONS[i % EXPENSE_DESCRIPTIONS.length] + (i >= EXPENSE_DESCRIPTIONS.length ? ` ${Math.floor(i / EXPENSE_DESCRIPTIONS.length) + 1}` : ""),
-    date:        pastDate(count - i),              // oldest first so newest-first ordering works
-    createdAt:   admin.firestore.Timestamp.now(),
-  }));
+  const participantUids = PARTICIPANTS.filter(p => p.uid).map(p => p.uid);
+  return Array.from({ length: count }, (_, i) => {
+    const recorder = PARTICIPANTS[i % PARTICIPANTS.length];
+    const recordedByUid = recorder.uid ?? null;
+    const unreadBy = participantUids.filter(uid => uid !== recordedByUid);
+    return {
+      sharedExpenseId: seId,
+      creatorUid:      CREATOR.uid,
+      recordedByUid,
+      paidByEmail:     recorder.email,
+      amount:          randomBetween(1000, 50000) * 10,  // e.g. $10,000 – $500,000
+      description:     EXPENSE_DESCRIPTIONS[i % EXPENSE_DESCRIPTIONS.length] + (i >= EXPENSE_DESCRIPTIONS.length ? ` ${Math.floor(i / EXPENSE_DESCRIPTIONS.length) + 1}` : ""),
+      date:            pastDate(count - i),              // oldest first so newest-first ordering works
+      createdAt:       admin.firestore.Timestamp.now(),
+      unreadBy,
+    };
+  });
 }
 
 function buildPayments(seId, count) {
+  const participantUids = PARTICIPANTS.filter(p => p.uid).map(p => p.uid);
   return Array.from({ length: count }, (_, i) => {
     const [from, to] = i % 2 === 0
       ? [PARTICIPANTS[0], PARTICIPANTS[1]]
       : [PARTICIPANTS[1], PARTICIPANTS[0]];
+    const recordedByUid = from.uid ?? null;
+    const unreadBy = participantUids.filter(uid => uid !== recordedByUid);
     return {
       sharedExpenseId: seId,
-      creatorUid: CREATOR.uid,
-      fromEmail:  from.email,
-      toEmail:    to.email,
-      amount:     randomBetween(500, 20000) * 10,
-      date:       pastDate(count - i),
-      createdAt:  admin.firestore.Timestamp.now(),
+      creatorUid:      CREATOR.uid,
+      recordedByUid,
+      fromEmail:       from.email,
+      toEmail:         to.email,
+      amount:          randomBetween(500, 20000) * 10,
+      date:            pastDate(count - i),
+      createdAt:       admin.firestore.Timestamp.now(),
+      unreadBy,
     };
   });
 }

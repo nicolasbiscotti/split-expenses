@@ -19,6 +19,7 @@ export default class AppState {
     type: "unique",
     participants: [],
   };
+  private pendingInviteSeId: string | null = null;
   private renderFunctions: RenderFunction[] = [];
 
   // ==================== VIEW MANAGEMENT ====================
@@ -30,8 +31,19 @@ export default class AppState {
     if (view === "shared-expense-list") {
       store.clearCurrentSharedExpense();
     }
+    if (view === "history") {
+      store.markNotificationsRead();
+    }
     this.currentView = view;
     this.notify(store);
+  }
+
+  getPendingInviteSeId(): string | null {
+    return this.pendingInviteSeId;
+  }
+
+  setPendingInviteSeId(seId: string | null): void {
+    this.pendingInviteSeId = seId;
   }
 
   // ==================== CREATE STEPS ====================

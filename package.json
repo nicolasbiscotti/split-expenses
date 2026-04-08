@@ -7,7 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test-verbose": "vitest run --reporter=verbose",
+    "test:watch": "vitest --watch",
+    "test:debug": "vitest --inspect-brk --inspect --single-thread",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.17",
