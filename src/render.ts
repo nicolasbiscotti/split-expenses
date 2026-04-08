@@ -47,6 +47,11 @@ import renderLanding, { setupLanding } from "./components/landing/landing";
 // Profile
 import renderProfile, { setupProfile } from "./components/profile/profile";
 
+// Invite detail
+import renderInviteDetail, {
+  setupInviteDetail,
+} from "./components/inviteDetail/inviteDetail";
+
 /**
  * Main render function.
  * Called on every state or store change.
@@ -84,7 +89,7 @@ export default function render(state: AppState, store: AppStore): void {
       ${renderViewContent(currentView, state, store)}
     </div>
 
-    ${needsBottomNav ? bottomNavBar(state, currentSharedExpense) : ""}
+    ${needsBottomNav ? bottomNavBar(state, currentSharedExpense, store.getUnreadCount()) : ""}
   `;
 
   // Run setup functions after render
@@ -123,6 +128,9 @@ function renderViewContent(
 
     case "history":
       return renderHistory(state, store);
+
+    case "invite-detail":
+      return renderInviteDetail(state, store);
 
     case "profile":
       return renderProfile(state, store);
@@ -204,6 +212,14 @@ function setupViewInteractions(
       const container = app.querySelector<HTMLElement>("#view-content");
       if (container) {
         setupHistory(container, state, store);
+      }
+      break;
+    }
+
+    case "invite-detail": {
+      const container = app.querySelector<HTMLElement>("#view-content");
+      if (container) {
+        setupInviteDetail(container, state, store);
       }
       break;
     }

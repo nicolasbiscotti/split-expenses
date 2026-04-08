@@ -1,12 +1,20 @@
 import type { User } from "firebase/auth";
+import { Timestamp } from "firebase/firestore";
 import {
   expenseService,
   paymentService,
   sharedExpenseService,
   userProfileService,
   contactService,
-  type FirestoreCursor,
+  startExpensesListener,
+  startPaymentsListener,
+  startSeListener,
+  markNotificationsReadInDb,
+  PAGE_SIZE,
 } from "./services/databaseService";
+import { buildDocNotification } from "./services/notificationBuilders";
+import { startInviteListener } from "./services/notificationService";
+import { showToast } from "./util/toast";
 import type AppState from "./state/AppState";
 import type {
   UserProfile,
@@ -16,6 +24,7 @@ import type {
   SharedExpense,
   SharedExpenseParticipant,
   ViewType,
+  AppNotification,
 } from "./types";
 
 const CACHE_KEY_CURRENT_EXPENSE = "splitexpenses_current_id";
@@ -27,10 +36,14 @@ export default class AppStore {
   private payments: Payment[] = [];
   private sharedExpenses: SharedExpense[] = [];
   private currentSharedExpenseId: string | null = null;
-  private expensesCursor: FirestoreCursor | null = null;
+  private expensesLimit: number = PAGE_SIZE;
+  private paymentsLimit: number = PAGE_SIZE;
   private hasMoreExpenses: boolean = false;
-  private paymentsCursor: FirestoreCursor | null = null;
   private hasMorePayments: boolean = false;
+  private notifications: AppNotification[] = [];
+  private stopDataListeners: (() => void) | null = null;
+  private stopInviteListener: (() => void) | null = null;
+  private readonly listenerStart: Timestamp = Timestamp.now();
   private state: AppState;
 
   constructor(state: AppState) {
@@ -44,7 +57,6 @@ export default class AppStore {
 
   async initializeForUser(firebaseUser: User): Promise<void> {
     try {
-      // Upsert user profile in Firestore
       await userProfileService.ensureProfile(firebaseUser);
 
       this.currentUser = {
@@ -54,23 +66,31 @@ export default class AppStore {
         photoURL: firebaseUser.photoURL,
       };
 
-      // Load contacts and shared expenses in parallel
       const [contacts, sharedExpenses] = await Promise.all([
         contactService.getContacts(firebaseUser.uid),
-        sharedExpenseService.getForUser(firebaseUser.uid, firebaseUser.email || ''),
+        sharedExpenseService.getForUser(firebaseUser.uid, firebaseUser.email || ""),
       ]);
 
       this.contacts = contacts;
       this.sharedExpenses = sharedExpenses;
 
-      // Resolve any pending invite (SE where user's email appears but UID not yet stored)
-      await this.resolveInvites(firebaseUser.uid, firebaseUser.email ?? "");
+      // Start invite listener to detect new group invites in real time
+      this.stopInviteListener = startInviteListener(
+        this.sharedExpenses,
+        this.currentUser,
+        (newSE) => {
+          // Guard against duplicates (e.g. own SE creation fires the listener)
+          if (this.sharedExpenses.some((se) => se.id === newSE.id)) return;
+          this.sharedExpenses.unshift(newSE);
+          this.state.notify(this);
+        }
+      );
 
       // Restore cached current shared expense
       const cachedId = localStorage.getItem(CACHE_KEY_CURRENT_EXPENSE);
       if (cachedId && this.sharedExpenses.some((se) => se.id === cachedId)) {
         this.currentSharedExpenseId = cachedId;
-        await this.loadExpensesAndPayments();
+        this._startDataListeners(cachedId);
       } else {
         localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
         this.currentSharedExpenseId = null;
@@ -87,36 +107,23 @@ export default class AppStore {
   }
 
   clearUserData(): void {
+    this.stopDataListeners?.();
+    this.stopDataListeners = null;
+    this.stopInviteListener?.();
+    this.stopInviteListener = null;
     this.currentUser = null;
     this.contacts = [];
     this.expenses = [];
     this.payments = [];
     this.sharedExpenses = [];
     this.currentSharedExpenseId = null;
-    this.expensesCursor = null;
+    this.expensesLimit = PAGE_SIZE;
+    this.paymentsLimit = PAGE_SIZE;
     this.hasMoreExpenses = false;
-    this.paymentsCursor = null;
     this.hasMorePayments = false;
+    this.notifications = [];
     localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
     this.state.notify(this);
-  }
-
-  // Resolve shared expenses where the user was invited by email but UID not yet stored
-  private async resolveInvites(uid: string, email: string): Promise<void> {
-    if (!email) return;
-    const pendingSEs = await sharedExpenseService.getByParticipantEmail(uid, email);
-
-    const unresolved = pendingSEs.filter((se) => !se.participantUids.includes(uid));
-    if (unresolved.length === 0) return;
-
-    await Promise.all(
-      unresolved.map((se) =>
-        sharedExpenseService.resolveParticipantUid(se.id, email, uid)
-      )
-    );
-
-    // Reload shared expenses to include the newly resolved ones
-    this.sharedExpenses = await sharedExpenseService.getForUser(uid, email);
   }
 
   // ==================== CONTACTS ====================
@@ -165,11 +172,12 @@ export default class AppStore {
     try {
       const se = this.sharedExpenses.find((s) => s.id === expense.sharedExpenseId);
       expense.creatorUid = se?.creatorUid ?? "";
-      const { expenseId, totalAmount, expensesCount, netPaid } =
+      expense.recordedByUid = this.currentUser?.uid ?? "";
+      const { totalAmount, expensesCount, netPaid } =
         await expenseService.createExpense(expense);
-      expense.id = expenseId;
-      this.expenses.push(expense);
+      // Patch SE aggregates locally; SE document listener will confirm later
       this.patchLocalSE(expense.sharedExpenseId, { totalAmount, expensesCount, netPaid });
+      // Expense list is updated by the data listener — no local push needed
     } catch (error) {
       console.error("Failed to create expense:", error);
       throw error;
@@ -183,11 +191,8 @@ export default class AppStore {
     try {
       const { totalAmount, expensesCount, netPaid } =
         await expenseService.deleteExpense(id, sharedExpenseId);
-      this.expenses = this.expenses.filter((e) => e.id !== id);
       this.patchLocalSE(sharedExpenseId, { totalAmount, expensesCount, netPaid });
-      if (this.expenses.length === 0 && this.hasMoreExpenses) {
-        await this.loadMoreExpenses();
-      }
+      // Expense list is updated by the data listener — no local filter needed
     } catch (error) {
       console.error("Failed to delete expense:", error);
       throw error;
@@ -196,22 +201,16 @@ export default class AppStore {
     }
   }
 
-  async loadMoreExpenses(): Promise<void> {
-    const id = this.currentSharedExpenseId || "";
-    const page = await expenseService.getExpenses(id, this.expensesCursor);
-    this.expenses = [...this.expenses, ...page.data];
-    this.expensesCursor = page.cursor;
-    this.hasMoreExpenses = page.hasMore;
-    this.state.notify(this);
+  loadMoreExpenses(): void {
+    if (!this.currentSharedExpenseId || !this.hasMoreExpenses) return;
+    this.expensesLimit += PAGE_SIZE;
+    this._startDataListeners(this.currentSharedExpenseId);
   }
 
-  async loadMorePayments(): Promise<void> {
-    const id = this.currentSharedExpenseId || "";
-    const page = await paymentService.getPayments(id, this.paymentsCursor);
-    this.payments = [...this.payments, ...page.data];
-    this.paymentsCursor = page.cursor;
-    this.hasMorePayments = page.hasMore;
-    this.state.notify(this);
+  loadMorePayments(): void {
+    if (!this.currentSharedExpenseId || !this.hasMorePayments) return;
+    this.paymentsLimit += PAGE_SIZE;
+    this._startDataListeners(this.currentSharedExpenseId);
   }
 
   private patchLocalSE(id: string, updates: Partial<SharedExpense>): void {
@@ -228,10 +227,10 @@ export default class AppStore {
     try {
       const se = this.sharedExpenses.find((s) => s.id === payment.sharedExpenseId);
       payment.creatorUid = se?.creatorUid ?? "";
-      const { paymentId, netPaid } = await paymentService.createPayment(payment);
-      payment.id = paymentId;
-      this.payments.push(payment);
+      payment.recordedByUid = this.currentUser?.uid ?? "";
+      const { netPaid } = await paymentService.createPayment(payment);
       this.patchLocalSE(payment.sharedExpenseId, { netPaid });
+      // Payment list is updated by the data listener — no local push needed
     } catch (error) {
       console.error("Failed to create payment:", error);
       throw error;
@@ -244,11 +243,8 @@ export default class AppStore {
     const sharedExpenseId = this.currentSharedExpenseId || "";
     try {
       const { netPaid } = await paymentService.deletePayment(id, sharedExpenseId);
-      this.payments = this.payments.filter((p) => p.id !== id);
       this.patchLocalSE(sharedExpenseId, { netPaid });
-      if (this.payments.length === 0 && this.hasMorePayments) {
-        await this.loadMorePayments();
-      }
+      // Payment list is updated by the data listener — no local filter needed
     } catch (error) {
       console.error("Failed to delete payment:", error);
       throw error;
@@ -270,6 +266,14 @@ export default class AppStore {
     return this.sharedExpenses.find((se) => se.id === seId)?.participants ?? [];
   }
 
+  isPendingInvite(se: SharedExpense): boolean {
+    return (
+      !!this.currentUser &&
+      se.participantEmails.includes(this.currentUser.email) &&
+      !se.participantUids.includes(this.currentUser.uid)
+    );
+  }
+
   async createSharedExpense(sharedExpense: SharedExpense): Promise<string> {
     try {
       const sharedExpenseId = await sharedExpenseService.create({
@@ -287,7 +291,7 @@ export default class AppStore {
         createdAt: sharedExpense.createdAt,
       });
       sharedExpense.id = sharedExpenseId;
-      this.sharedExpenses.unshift(sharedExpense); // newest first
+      this.sharedExpenses.unshift(sharedExpense);
       await this.setCurrentSharedExpenseId(sharedExpenseId);
       return sharedExpenseId;
     } catch (error) {
@@ -317,50 +321,146 @@ export default class AppStore {
     });
   }
 
+  async acceptInvite(seId: string): Promise<void> {
+    if (!this.currentUser) return;
+    await sharedExpenseService.resolveParticipantUid(
+      seId,
+      this.currentUser.email,
+      this.currentUser.uid
+    );
+    // Update local SE to reflect accepted state
+    const se = this.sharedExpenses.find((s) => s.id === seId);
+    if (se) {
+      se.participantUids = [...se.participantUids, this.currentUser.uid];
+      se.participants = se.participants.map((p) =>
+        p.email === this.currentUser!.email
+          ? { ...p, uid: this.currentUser!.uid }
+          : p
+      );
+    }
+    await this.setCurrentSharedExpenseId(seId);
+    this.state.setCurrentView("dashboard", this);
+  }
+
   // ==================== CURRENT SHARED EXPENSE ====================
   getCurrentSharedExpenseId(): string | null {
     return this.currentSharedExpenseId;
   }
 
   clearCurrentSharedExpense(): void {
+    this.stopDataListeners?.();
+    this.stopDataListeners = null;
     this.currentSharedExpenseId = null;
     this.expenses = [];
-    this.expensesCursor = null;
+    this.expensesLimit = PAGE_SIZE;
     this.hasMoreExpenses = false;
     this.payments = [];
-    this.paymentsCursor = null;
+    this.paymentsLimit = PAGE_SIZE;
     this.hasMorePayments = false;
     localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
   }
 
   async setCurrentSharedExpenseId(id: string | null): Promise<void> {
+    this.stopDataListeners?.();
+    this.stopDataListeners = null;
+    this.expenses = [];
+    this.payments = [];
+    this.expensesLimit = PAGE_SIZE;
+    this.paymentsLimit = PAGE_SIZE;
     this.currentSharedExpenseId = id;
 
     if (id) {
-      await this.loadExpensesAndPayments();
+      this._startDataListeners(id);
       localStorage.setItem(CACHE_KEY_CURRENT_EXPENSE, id);
     } else {
-      this.expenses = [];
-      this.expensesCursor = null;
-      this.hasMoreExpenses = false;
-      this.payments = [];
-      this.paymentsCursor = null;
-      this.hasMorePayments = false;
       localStorage.removeItem(CACHE_KEY_CURRENT_EXPENSE);
+      this.state.notify(this);
     }
   }
 
-  private async loadExpensesAndPayments(): Promise<void> {
-    const id = this.currentSharedExpenseId || "";
-    const [expPage, payPage] = await Promise.all([
-      expenseService.getExpenses(id),
-      paymentService.getPayments(id),
-    ]);
-    this.expenses = expPage.data;
-    this.expensesCursor = expPage.cursor;
-    this.hasMoreExpenses = expPage.hasMore;
-    this.payments = payPage.data;
-    this.paymentsCursor = payPage.cursor;
-    this.hasMorePayments = payPage.hasMore;
+  private _startDataListeners(seId: string): void {
+    // Stop existing listeners before starting new ones
+    this.stopDataListeners?.();
+
+    const seName = this.sharedExpenses.find((se) => se.id === seId)?.name ?? "";
+
+    const unsub1 = startExpensesListener(
+      seId,
+      this.expensesLimit,
+      (expenses, hasMore, changes) => {
+        this.expenses = expenses;
+        this.hasMoreExpenses = hasMore;
+        this._processDocChanges(changes, "expense_added", seId, seName);
+        this.state.notify(this);
+      }
+    );
+
+    const unsub2 = startPaymentsListener(
+      seId,
+      this.paymentsLimit,
+      (payments, hasMore, changes) => {
+        this.payments = payments;
+        this.hasMorePayments = hasMore;
+        this._processDocChanges(changes, "payment_added", seId, seName);
+        this.state.notify(this);
+      }
+    );
+
+    const unsub3 = startSeListener(seId, (se) => {
+      this.patchLocalSE(se.id, se);
+      this.state.notify(this);
+    });
+
+    this.stopDataListeners = () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }
+
+  private _processDocChanges(
+    changes: Array<{ type: string; item: Expense | Payment }>,
+    type: "expense_added" | "payment_added",
+    seId: string,
+    seName: string
+  ): void {
+    if (!this.currentUser) return;
+    for (const { type: changeType, item } of changes) {
+      if (changeType !== "added") continue;
+      const result = buildDocNotification(
+        item as unknown as { unreadBy?: string[]; createdAt: Timestamp; amount?: number; description?: string; fromEmail?: string; toEmail?: string },
+        item.id,
+        type,
+        seId,
+        seName,
+        this.currentUser.uid,
+        this.listenerStart
+      );
+      if (!result) continue;
+      this.notifications.unshift(result.notification);
+      if (result.isRealtime) showToast(result.notification.message, "info");
+    }
+  }
+
+  // ==================== NOTIFICATIONS ====================
+  getUnreadCount(): number {
+    const id = this.currentSharedExpenseId;
+    if (!id) return 0;
+    return this.notifications.filter((n) => n.seId === id).length;
+  }
+
+  getNotifications(): AppNotification[] {
+    return [...this.notifications];
+  }
+
+  markNotificationsRead(): void {
+    const id = this.currentSharedExpenseId;
+    if (!id || !this.currentUser) return;
+    const toMark = this.notifications.filter((n) => n.seId === id);
+    this.notifications = this.notifications.filter((n) => n.seId !== id);
+    // Fire-and-forget: clear unreadBy in Firestore
+    markNotificationsReadInDb(toMark, this.currentUser.uid).catch((err) =>
+      console.error("Failed to mark notifications read:", err)
+    );
   }
 }

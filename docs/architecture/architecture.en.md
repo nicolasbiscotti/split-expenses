@@ -36,45 +36,40 @@ state.updateNewSharedExpenseData({ name: "Vacation" });
 **Responsibilities:**
 
 - ✅ Real data: `participants`, `expenses`, `payments`, `sharedExpenses`
-- ✅ Interaction with Firebase/IndexedDB
-- ✅ `currentSharedExpenseId` (last active shared expense)
+- ✅ Interaction with Firebase via `onSnapshot` listeners and service calls
+- ✅ `currentSharedExpenseId` (last active shared expense, cached in localStorage)
 - ✅ CRUD operations
+- ✅ Listener lifecycle — starts listeners on sign-in / SE selection, stops them on sign-out
 
 **Persistence:**
 
-- **Primary:** Firebase/IndexedDB (full data)
-- **Optional:** localStorage for `currentSharedExpenseId` (cache)
+- **Primary:** Firestore via `onSnapshot` listeners (expenses, payments, current SE document, SE collection for invites)
+- **Optional:** localStorage for `currentSharedExpenseId` (cache across reloads)
+
+**Listener management:**
 
 ```typescript
-// AppStore handles real data
+// AppStore manages Firestore listeners
 export default class AppStore {
-  private currentSharedExpenseId: string | null = null;
+  private stopDataListeners: (() => void) | null = null;
+  private stopInviteListener: (() => void) | null = null;
 
-  constructor(state: AppState) {
-    this.state = state;
-    this.loadFromStorage(); // Load from Firebase
-    this.loadLastActiveFromCache(); // Optional: localStorage cache
-  }
+  // Called on sign-in: starts the SE invite listener
+  async initializeForUser(firebaseUser: User): Promise<void> { ... }
 
-  // Save last active shared expense in cache
-  setCurrentSharedExpenseId(id: string | null): void {
-    this.currentSharedExpenseId = id;
-    if (id) {
-      localStorage.setItem("last_shared_expense_id", id);
-    } else {
-      localStorage.removeItem("last_shared_expense_id");
-    }
-  }
+  // Called when selecting an SE: starts expense, payment, and SE-doc listeners
+  async setCurrentSharedExpenseId(id: string | null): Promise<void> { ... }
 
-  // Load from cache (optional)
-  private loadLastActiveFromCache(): void {
-    const cachedId = localStorage.getItem("last_shared_expense_id");
-    if (cachedId && this.getSharedExpense(cachedId)) {
-      this.currentSharedExpenseId = cachedId;
-    }
+  // Called on sign-out: stops all listeners and clears state
+  clearUserData(): void {
+    this.stopDataListeners?.();
+    this.stopInviteListener?.();
+    // ... clear all fields
   }
 }
 ```
+
+Listeners call `this.state.notify(this)` directly when Firestore data changes, triggering a re-render without any user action.
 
 ---
 
@@ -121,6 +116,10 @@ export function setupMyComponent(
 
 ## Data Flow
 
+There are two paths that trigger a re-render: user actions and Firestore listener updates.
+
+### Path 1 — User action
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      User Interacts                      │
@@ -130,14 +129,13 @@ export function setupMyComponent(
 ┌─────────────────────────────────────────────────────────┐
 │              setupComponent (Event Handler)              │
 │  - Captures event                                       │
-│  - Updates state.setCurrentView() or store.addExpense() │
+│  - Calls state.setCurrentView() or store.addExpense()   │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│         AppState or AppStore notify change               │
+│         AppState or AppStore notifies change             │
 │  - state.notify(store) → calls render()                  │
-│  - store.saveToFirebase() → persists data                │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
@@ -153,6 +151,30 @@ export function setupMyComponent(
 │          setupViewInteractions() configures events       │
 │  - Finds DOM elements                                   │
 │  - Attaches event listeners                             │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Path 2 — Firestore listener update
+
+```
+┌─────────────────────────────────────────────────────────┐
+│         Firestore onSnapshot fires                       │
+│  (another participant adds expense/payment,              │
+│   new SE invite arrives, SE metadata changes)           │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│         AppStore listener callback runs                  │
+│  - Updates this.expenses / this.payments / this.sharedExpenses
+│  - Builds notifications, fires toasts                   │
+│  - Calls this.state.notify(this)                        │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              render(state, store) executes               │
+│  (same render cycle as Path 1)                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -300,12 +322,13 @@ TypeScript ensures `state` and `store` have correct types
 ## Implementation Checklist
 
 - [ ] AppState handles only UI (view, step, temporary data)
-- [ ] AppStore handles real data + Firebase
+- [ ] AppStore handles real data + Firestore listeners
 - [ ] localStorage only for optional cache (e.g., last active expense)
 - [ ] All components receive `state` and `store`
 - [ ] Each component has `render()` and `setup()`
 - [ ] `setup()` is called in `setupViewInteractions()`
-- [ ] Only `state.setCurrentView()` or store changes trigger `render()`
+- [ ] Re-renders are triggered by either user actions (Path 1) or Firestore listener callbacks (Path 2) — both call `state.notify(store)`
+- [ ] All `onSnapshot` listeners are unsubscribed on sign-out (`clearUserData`)
 
 ---
 

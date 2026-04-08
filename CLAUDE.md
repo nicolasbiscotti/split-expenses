@@ -8,9 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm dev          # Start Vite development server
 pnpm build        # TypeScript check + Vite build
 pnpm preview      # Preview production build
+pnpm test         # Run all unit tests (single pass)
+pnpm test:watch   # Run tests in watch mode
 ```
 
-No test or lint scripts are configured. TypeScript strict mode serves as the primary static check.
+TypeScript strict mode and Vitest unit tests are the primary static checks.
 
 ## Environment Setup
 
@@ -69,6 +71,48 @@ Code and comments must be in English. The UI (user-facing strings in HTML templa
 - Unused variables/parameters must be prefixed with `_` (enforced by tsconfig)
 - Strict null checks enabled — avoid non-null assertions unless certain
 - All async DB operations use `async/await` with `try/catch`
+
+## Testing
+
+Tests are written with [Vitest](https://vitest.dev/). Run with `pnpm test` (single pass) or `pnpm test:watch` (watch mode).
+
+### TDD workflow
+
+For every new feature or bug fix:
+1. Write a failing test that describes the expected behavior
+2. Write the minimum code to make the test pass
+3. Refactor — clean up while keeping tests green
+
+### What to test
+
+- **Unit tests** (`src/**/*.test.ts`) — pure functions with no side effects: calculation utilities, notification builders, transformation logic. These run without Firebase.
+- **Firestore rules tests** (deferred to #014) — `@firebase/rules-unit-testing` against the emulator.
+- Do **not** unit test `onSnapshot` wiring, Firestore service calls, or render functions — integration concerns.
+
+### File conventions
+
+Co-locate test files with the source: `src/util/calculations.test.ts` next to `calculations.ts`, `src/services/notificationService.test.ts` next to `notificationService.ts`, etc.
+
+## Listener architecture
+
+The app maintains a constant set of 4 Firestore `onSnapshot` listeners while a user is signed in and has a current SE selected:
+
+| Listener | Scope | Purpose |
+|----------|-------|---------|
+| SE collection | `participantEmails array-contains email` | Detect new group invites in real time |
+| SE document | Current SE only | Keep `totalAmount`, `netPaid`, `expensesCount` fresh |
+| Expenses sub-collection | Current SE, `limit(expensesLimit)` | Authoritative expense list + badge + toasts |
+| Payments sub-collection | Current SE, `limit(paymentsLimit)` | Authoritative payment list + badge + toasts |
+
+All listeners are managed in `store.ts`. `stopInviteListener` and `stopDataListeners` are called on sign-out.
+
+### Notification state
+
+`unreadBy: string[]` on each expense/payment doc is the source of truth. Own writes exclude `recordedByUid` from `unreadBy` at creation time. Badge count = notifications for current SE only. Navigate to History → `markNotificationsRead()` → batch `arrayRemove` in Firestore.
+
+### Pagination
+
+"Load more" increments `expensesLimit`/`paymentsLimit` and re-attaches the same listener (N+1 limit trick to detect `hasMore`).
 
 ## Reference Docs
 

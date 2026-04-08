@@ -32,45 +32,40 @@ state.updateNewSharedExpenseData({ name: "Vacaciones" });
 **Responsabilidades:**
 
 - ✅ Datos reales: `participants`, `expenses`, `payments`, `sharedExpenses`
-- ✅ Interacción con Firebase/IndexedDB
-- ✅ `currentSharedExpenseId` (último gasto compartido activo)
+- ✅ Interacción con Firebase mediante listeners `onSnapshot` y llamadas a servicios
+- ✅ `currentSharedExpenseId` (último gasto compartido activo, en caché en localStorage)
 - ✅ Operaciones CRUD
+- ✅ Ciclo de vida de listeners — los inicia al iniciar sesión / seleccionar un SE, los detiene al cerrar sesión
 
 **Persistencia:**
 
-- **Principal:** Firebase/IndexedDB (datos completos)
-- **Opcional:** localStorage para `currentSharedExpenseId` (cache)
+- **Principal:** Firestore via listeners `onSnapshot` (gastos, pagos, documento del SE actual, colección de SEs para invitaciones)
+- **Opcional:** localStorage para `currentSharedExpenseId` (caché entre recargas)
+
+**Gestión de listeners:**
 
 ```typescript
-// AppStore maneja datos reales
+// AppStore gestiona los listeners de Firestore
 export default class AppStore {
-  private currentSharedExpenseId: string | null = null;
+  private stopDataListeners: (() => void) | null = null;
+  private stopInviteListener: (() => void) | null = null;
 
-  constructor(state: AppState) {
-    this.state = state;
-    this.loadFromStorage(); // Carga desde Firebase
-    this.loadLastActiveFromCache(); // Opcional: cache de localStorage
-  }
+  // Llamado al iniciar sesión: inicia el listener de invitaciones de SE
+  async initializeForUser(firebaseUser: User): Promise<void> { ... }
 
-  // Guardar último gasto compartido activo en cache
-  setCurrentSharedExpenseId(id: string | null): void {
-    this.currentSharedExpenseId = id;
-    if (id) {
-      localStorage.setItem("last_shared_expense_id", id);
-    } else {
-      localStorage.removeItem("last_shared_expense_id");
-    }
-  }
+  // Llamado al seleccionar un SE: inicia listeners de gastos, pagos y documento del SE
+  async setCurrentSharedExpenseId(id: string | null): Promise<void> { ... }
 
-  // Cargar desde cache (opcional)
-  private loadLastActiveFromCache(): void {
-    const cachedId = localStorage.getItem("last_shared_expense_id");
-    if (cachedId && this.getSharedExpense(cachedId)) {
-      this.currentSharedExpenseId = cachedId;
-    }
+  // Llamado al cerrar sesión: detiene todos los listeners y limpia el estado
+  clearUserData(): void {
+    this.stopDataListeners?.();
+    this.stopInviteListener?.();
+    // ... limpiar todos los campos
   }
 }
 ```
+
+Los listeners llaman a `this.state.notify(this)` directamente cuando los datos de Firestore cambian, disparando un re-render sin ninguna acción del usuario.
 
 ---
 
@@ -117,6 +112,10 @@ export function setupMyComponent(
 
 ## Flujo de Datos
 
+Hay dos caminos que disparan un re-render: acciones del usuario y actualizaciones de listeners de Firestore.
+
+### Camino 1 — Acción del usuario
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      Usuario Interactúa                  │
@@ -126,14 +125,13 @@ export function setupMyComponent(
 ┌─────────────────────────────────────────────────────────┐
 │              setupComponent (Event Handler)              │
 │  - Captura evento                                        │
-│  - Actualiza state.setCurrentView() o store.addExpense()│
+│  - Llama state.setCurrentView() o store.addExpense()    │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
 │         AppState o AppStore notifica cambio              │
 │  - state.notify(store) → llama render()                  │
-│  - store.saveToFirebase() → persiste datos              │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
@@ -149,6 +147,31 @@ export function setupMyComponent(
 │          setupViewInteractions() configura eventos       │
 │  - Encuentra elementos del DOM                           │
 │  - Adjunta event listeners                               │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Camino 2 — Actualización de listener de Firestore
+
+```
+┌─────────────────────────────────────────────────────────┐
+│         Firestore onSnapshot se dispara                  │
+│  (otro participante agrega gasto/pago,                   │
+│   llega una invitación a un nuevo SE,                    │
+│   los metadatos del SE cambian)                          │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│         Callback del listener en AppStore se ejecuta     │
+│  - Actualiza this.expenses / this.payments / this.sharedExpenses
+│  - Genera notificaciones, dispara toasts                 │
+│  - Llama this.state.notify(this)                        │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              render(state, store) se ejecuta             │
+│  (mismo ciclo de render que el Camino 1)                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -296,12 +319,13 @@ TypeScript garantiza que `state` y `store` tengan los tipos correctos
 ## Checklist de Implementación
 
 - [ ] AppState maneja solo UI (vista, paso, datos temporales)
-- [ ] AppStore maneja datos reales + Firebase
+- [ ] AppStore maneja datos reales + listeners de Firestore
 - [ ] localStorage solo para cache opcional (ej: último gasto activo)
 - [ ] Todos los componentes reciben `state` y `store`
 - [ ] Cada componente tiene `render()` y `setup()`
 - [ ] `setup()` se llama en `setupViewInteractions()`
-- [ ] Solo `state.setCurrentView()` o cambios en store activan `render()`
+- [ ] Los re-renders se disparan por acciones del usuario (Camino 1) o por callbacks de listeners de Firestore (Camino 2) — ambos llaman a `state.notify(store)`
+- [ ] Todos los listeners `onSnapshot` se cancelan al cerrar sesión (`clearUserData`)
 
 ---
 

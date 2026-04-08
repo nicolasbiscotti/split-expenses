@@ -25,6 +25,8 @@ export interface Expense {
   amount: number;
   description: string;
   date: string;
+  recordedByUid?: string;
+  unreadBy?: string[];
 }
 
 export interface Payment {
@@ -35,6 +37,8 @@ export interface Payment {
   toEmail: string;
   amount: number;
   date: string;
+  recordedByUid?: string;
+  unreadBy?: string[];
 }
 
 export interface Balance {
@@ -57,6 +61,7 @@ export type ViewType =
   | "create-step-1"
   | "create-step-2"
   | "create-step-3"
+  | "invite-detail"
   | "profile";
 
 export type StepValue = 1 | 2 | 3;
@@ -89,4 +94,19 @@ export interface Period {
   startDate: string;
   endDate?: string;
   status: SharedExpenseStatus;
+}
+
+// Notifications
+
+import type { Timestamp } from "firebase/firestore";
+
+export type NotificationType = "expense_added" | "payment_added" | "se_invite";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  seId: string;
+  seName: string;
+  message: string;
+  createdAt: Timestamp;
 }
