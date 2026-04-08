@@ -93,6 +93,27 @@ For every new feature or bug fix:
 
 Co-locate test files with the source: `src/util/calculations.test.ts` next to `calculations.ts`, `src/services/notificationService.test.ts` next to `notificationService.ts`, etc.
 
+## Listener architecture
+
+The app maintains a constant set of 4 Firestore `onSnapshot` listeners while a user is signed in and has a current SE selected:
+
+| Listener | Scope | Purpose |
+|----------|-------|---------|
+| SE collection | `participantEmails array-contains email` | Detect new group invites in real time |
+| SE document | Current SE only | Keep `totalAmount`, `netPaid`, `expensesCount` fresh |
+| Expenses sub-collection | Current SE, `limit(expensesLimit)` | Authoritative expense list + badge + toasts |
+| Payments sub-collection | Current SE, `limit(paymentsLimit)` | Authoritative payment list + badge + toasts |
+
+All listeners are managed in `store.ts`. `stopInviteListener` and `stopDataListeners` are called on sign-out.
+
+### Notification state
+
+`unreadBy: string[]` on each expense/payment doc is the source of truth. Own writes exclude `recordedByUid` from `unreadBy` at creation time. Badge count = notifications for current SE only. Navigate to History → `markNotificationsRead()` → batch `arrayRemove` in Firestore.
+
+### Pagination
+
+"Load more" increments `expensesLimit`/`paymentsLimit` and re-attaches the same listener (N+1 limit trick to detect `hasMore`).
+
 ## Reference Docs
 
 `docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, and custom events — consult these before adding new patterns.
