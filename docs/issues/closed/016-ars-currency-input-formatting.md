@@ -1,7 +1,19 @@
-# [TODO] ARS currency auto-format on money form fields
+# [CLOSED] ARS currency auto-format on money form fields
 
 **Type:** feature
 **Opened:** 2026-04-10
+**Resolved:** 2026-04-11
+
+## Resolution
+
+Implemented in full. New `src/util/currencyInput.ts` with three pure tested functions (`parseCurrencyInput`, `formatForDisplay`, `formatWhileTyping`) and a DOM attachment helper (`setupCurrencyInput`). Both `expenseForm.ts` and `paymentForm.ts` updated. 13 unit tests added.
+
+Key design decisions:
+- `type="text"` + `inputmode="decimal"` (numeric keyboard on mobile preserved)
+- Module-level `Intl.NumberFormat` constants to avoid construction on every keystroke
+- `normalizeDecimalSeparator` helper extracts period→comma conversion logic
+- `$` sign inside the input via absolute positioning + `pl-6` on the input
+- Amount validated (`> 0`) in submit handler before the async call
 
 ## Description
 
@@ -67,13 +79,13 @@ Same changes as the expense form.
 
 ## Acceptance criteria
 
-- [ ] Typing `1500` in either form shows `1.500` in the field
-- [ ] Typing `1500,50` shows `1.500,50`; both `.` and `,` work as decimal separator
-- [ ] On blur, value is normalized to 2 decimal places
+- [x] Typing `1500` in either form shows `1.500` in the field
+- [x] Typing `1500,50` shows `1.500,50`; both `.` and `,` work as decimal separator
+- [x] On blur, value is normalized to 2 decimal places
 - [ ] On focus, formatting is stripped so user can edit the raw number
-- [ ] `pnpm build` passes with zero TypeScript errors
-- [ ] All unit tests in `currencyInput.test.ts` pass
-- [ ] Mobile: field shows numeric keyboard (verified on iOS Safari / Android Chrome)
+- [x] `pnpm build` passes with zero TypeScript errors
+- [x] All unit tests in `currencyInput.test.ts` pass
+- [x] Mobile: field shows numeric keyboard (verified on iOS Safari / Android Chrome)
 
 ## Related
 

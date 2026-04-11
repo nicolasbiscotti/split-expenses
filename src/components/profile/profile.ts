@@ -6,6 +6,7 @@ import {
   renderAddContactForm,
   setupAddContactForm,
 } from "../shared/addContactForm";
+import { icon, renderIcons } from "../../util/icons";
 
 /**
  * Render: Profile and contacts management view
@@ -35,11 +36,11 @@ export default function renderProfile(
               <p class="text-xs text-gray-500">${c.email}</p>
             </div>
             <button
-              class="delete-contact-btn text-red-500 hover:text-red-700 text-sm"
+              class="delete-contact-btn text-red-500 hover:text-red-700"
               data-contact-id="${c.email.replace(/[^a-zA-Z0-9]/g, "_")}"
               title="Eliminar contacto"
             >
-              🗑️
+              ${icon("trash-2", "w-4 h-4")}
             </button>
           </div>
         `
@@ -52,12 +53,12 @@ export default function renderProfile(
         onclick="setView('shared-expense-list')"
         class="text-blue-600 flex items-center gap-1"
       >
-        ← Mis Gastos
+        ${icon("arrow-left", "w-4 h-4")} Mis Gastos
       </button>
 
       <!-- Profile section -->
       <div class="bg-white rounded-xl shadow p-6">
-        <h2 class="text-lg font-semibold mb-4">Mi Perfil</h2>
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">${icon("user", "w-5 h-5")} Mi Perfil</h2>
         <div class="flex items-center gap-4 mb-4">
           ${avatarHtml}
           <div>
@@ -67,15 +68,15 @@ export default function renderProfile(
         </div>
         <button
           id="sign-out-btn"
-          class="w-full border border-red-300 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition"
+          class="w-full border border-red-300 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition flex items-center justify-center gap-2"
         >
-          Cerrar sesión
+          ${icon("log-out", "w-4 h-4")} Cerrar sesión
         </button>
       </div>
 
       <!-- Contacts section -->
       <div class="bg-white rounded-xl shadow p-6">
-        <h2 class="text-lg font-semibold mb-4">Mis Contactos</h2>
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">${icon("users", "w-5 h-5")} Mis Contactos</h2>
         <div id="contacts-list" class="space-y-2 mb-4">
           ${contactsHtml}
         </div>
@@ -128,14 +129,16 @@ export function setupProfile(
       if (!contactId) return;
 
       btn.disabled = true;
-      btn.textContent = "⏳";
+      btn.innerHTML = icon("loader-2", "w-4 h-4 animate-spin");
+      renderIcons();
       try {
         await store.removeContact(contactId);
         showToast("Contacto eliminado");
         state.setCurrentView("profile", store);
       } catch (_error) {
         btn.disabled = false;
-        btn.textContent = "🗑️";
+        btn.innerHTML = icon("trash-2", "w-4 h-4");
+        renderIcons();
         showToast("Error al eliminar el contacto.", "error");
       }
     });

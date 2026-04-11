@@ -4,6 +4,7 @@ import type { SharedExpenseParticipant } from "../../types";
 import { calculateBalancesFromNetPaid, calculateDebts } from "../../util/calculations";
 import { formatCurrency } from "../../util/format";
 import renderDebtList from "./debtList";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Main dashboard with summary and balances
@@ -35,7 +36,7 @@ export default function renderDashboard(
 function renderTotalSummary(total: number, count: number): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-lg font-semibold mb-2">Resumen Total</h2>
+      <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">${icon("bar-chart-2", "w-5 h-5")} Resumen Total</h2>
       <p class="text-3xl font-bold text-blue-600">${formatCurrency(total)}</p>
       <p class="text-sm text-gray-600">${count} gasto${
     count !== 1 ? "s" : ""
@@ -50,7 +51,7 @@ function renderTotalSummary(total: number, count: number): string {
 function renderBalancesList(balances: any[], participants: SharedExpenseParticipant[]): string {
   return `
     <div class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-lg font-semibold mb-3">Balance por Persona</h2>
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">${icon("scale", "w-5 h-5")} Balance por Persona</h2>
       <div class="space-y-2">
         ${balances
           .map((balance) => renderBalanceItem(balance, participants))

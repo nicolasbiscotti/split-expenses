@@ -6,6 +6,7 @@ import renderDebtList from "../dashboard/debtList";
 import { renderPaymentList } from "../history/paymentList";
 import { showToast } from "../../util/toast";
 import { setupCurrencyInput } from "../../util/currencyInput";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Payment form + debt suggestions
@@ -24,7 +25,7 @@ export default function renderPaymentForm(
   return `
     <div class="space-y-4">
       <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-4">Registrar Pago</h2>
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">${icon("arrow-right-left", "w-5 h-5")} Registrar Pago</h2>
         <form id="payment-form" class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-1">Quién paga</label>
@@ -73,16 +74,16 @@ export default function renderPaymentForm(
           <div class="flex gap-2">
             <button
               type="submit"
-              class="flex-1 bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700 transition"
+              class="flex-1 bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700 transition flex items-center justify-center gap-1"
             >
-              Guardar
+              ${icon("check", "w-4 h-4")} Guardar
             </button>
             <button
               type="button"
               id="cancel-payment"
-              class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition"
+              class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition flex items-center justify-center gap-1"
             >
-              Cancelar
+              ${icon("x", "w-4 h-4")} Cancelar
             </button>
           </div>
         </form>

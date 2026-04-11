@@ -20,5 +20,5 @@ To resolve an issue: move the file to `closed/` and add a **Resolved** date + **
 | [013](closed/013-firestore-rules-missing-aggregate-fields.md) | bug | closed | Non-creator participants cannot create or delete expenses and payments |
 | [014](open/014-automated-test-suite.md) | todo | open | Automated test suite (Vitest + Firestore rules tests) |
 | [015](closed/015-load-more-hidden-after-deleting-full-page.md) | bug | closed | "Cargar más" button disappears after deleting all documents on the current page |
-| [016](open/016-ars-currency-input-formatting.md) | feature | open | ARS currency auto-format on money form fields |
+| [016](closed/016-ars-currency-input-formatting.md) | feature | closed | ARS currency auto-format on money form fields |
 | [017](open/017-lucide-icons.md) | feature | open | Modern icons with Lucide across the app |

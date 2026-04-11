@@ -1,6 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import type { SharedExpense } from "../../types";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Step 3 of the wizard - review and confirm
@@ -14,9 +15,9 @@ export default function renderCreateStep3(
   return `
     <div class="mb-6">
       <button id="back-to-step-2" class="text-blue-600 flex items-center gap-1 mb-4">
-        ← Volver
+        ${icon("arrow-left", "w-4 h-4")} Volver
       </button>
-      <h1 class="text-2xl font-bold text-gray-800">Crear Gasto Compartido</h1>
+      <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("folder-plus", "w-6 h-6")} Crear Gasto Compartido</h1>
       <p class="text-gray-600">Paso 3 de 3: Confirmar</p>
     </div>
 
@@ -76,9 +77,9 @@ export default function renderCreateStep3(
 
     <button
       id="create-shared-expense-btn"
-      class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center"
+      class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center gap-2"
     >
-      <span id="button-text">Crear Gasto Compartido</span>
+      <span id="button-text" class="flex items-center gap-2">${icon("folder-plus", "w-5 h-5")} Crear Gasto Compartido</span>
       <span id="button-loading" class="hidden">
         <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

@@ -1,4 +1,5 @@
 import type { SharedExpense, UserProfile } from "../../types";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Top bar showing the active shared expense name and navigation
@@ -23,7 +24,7 @@ export default function sharedExpenseTopBar(
           class="text-blue-600 flex items-center gap-1 shrink-0"
           aria-label="Volver a Mis Gastos"
         >
-          ← Mis Gastos
+          ${icon("arrow-left", "w-4 h-4")} Mis Gastos
         </button>
         <span class="text-gray-300">|</span>
         <h1 class="font-semibold text-gray-800 truncate flex-1">${name}</h1>

@@ -4,6 +4,7 @@ import type { Expense } from "../../types";
 import { showToast } from "../../util/toast";
 import { renderExpenseList } from "../history/expenseList";
 import { setupCurrencyInput } from "../../util/currencyInput";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Expense form + expense list
@@ -19,7 +20,7 @@ export default function renderExpenseForm(
   return `
     <div class="space-y-4">
     <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold mb-4">Agregar Gasto</h2>
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">${icon("receipt", "w-5 h-5")} Agregar Gasto</h2>
       <form id="expense-form" class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Quién pagó</label>
@@ -65,16 +66,16 @@ export default function renderExpenseForm(
         <div class="flex gap-2">
           <button
             type="submit"
-            class="flex-1 bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 transition"
+            class="flex-1 bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 transition flex items-center justify-center gap-1"
           >
-            Guardar
+            ${icon("check", "w-4 h-4")} Guardar
           </button>
           <button
             type="button"
             id="cancel-expense"
-            class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition"
+            class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-400 transition flex items-center justify-center gap-1"
           >
-            Cancelar
+            ${icon("x", "w-4 h-4")} Cancelar
           </button>
         </div>
       </form>

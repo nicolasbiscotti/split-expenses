@@ -1,5 +1,6 @@
 import type AppStore from "./store";
 import type AppState from "./state/AppState";
+import { renderIcons } from "./util/icons";
 
 // Dashboard
 import renderDashboard, {
@@ -63,6 +64,7 @@ export default function render(state: AppState, store: AppStore): void {
   // Auth gate: show landing if user is not signed in
   if (!store.getCurrentUser()) {
     app.innerHTML = renderLanding(state, store);
+    renderIcons();
     setupLanding(app, store);
     return;
   }
@@ -91,6 +93,8 @@ export default function render(state: AppState, store: AppStore): void {
 
     ${needsBottomNav ? bottomNavBar(state, currentSharedExpense, store.getUnreadCount()) : ""}
   `;
+
+  renderIcons();
 
   // Run setup functions after render
   setupViewInteractions(currentView, state, store);
