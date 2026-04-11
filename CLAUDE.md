@@ -114,6 +114,28 @@ All listeners are managed in `store.ts`. `stopInviteListener` and `stopDataListe
 
 "Load more" increments `expensesLimit`/`paymentsLimit` and re-attaches the same listener (N+1 limit trick to detect `hasMore`).
 
+## Icon System
+
+Icons are provided by [Lucide](https://lucide.dev/) via `src/util/icons.ts`.
+
+- **In templates:** use the `icon(name, cls?)` helper — emits `<i data-lucide="icon-name" class="...">` placeholder strings (kebab-case icon name).
+- **After render:** `render.ts` calls `renderIcons()` immediately after every `innerHTML` update. This replaces all `<i data-lucide>` placeholders with inline SVGs.
+- **Dynamic icon swaps** (e.g. loading state on a delete button): set `btn.innerHTML = icon(...)` then call `renderIcons()` again — already-replaced SVGs are not double-processed.
+- **Adding a new icon:** import it from `lucide` in `icons.ts` and add it to `ICON_SET`.
+
+Icon sizes: `w-6 h-6` in the bottom nav, `w-5 h-5` in section headers, `w-4 h-4` in buttons and inline actions.
+
+## Currency Input
+
+Money form fields use `type="text"` + `inputmode="decimal"` (not `type="number"`) to enable ARS locale formatting.
+
+- **`src/util/currencyInput.ts`** — three pure exported functions:
+  - `parseCurrencyInput(raw)` — parses es-AR formatted strings or US-format fallback to a float
+  - `formatForDisplay(value)` — formats a number as `"1.500,50"` (no currency symbol)
+  - `formatWhileTyping(raw)` — progressive format on each keystroke; caps decimal at 2 digits
+- **`setupCurrencyInput(input)`** — attaches `input`/`blur` listeners; returns a `getValue()` accessor for use in submit handlers instead of `parseFloat(formData.get(...))`.
+- The `$` sign is shown inside the field via absolute positioning (`relative` wrapper + `absolute left-2` span + `pl-6` on the input).
+
 ## Reference Docs
 
 `docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, and custom events — consult these before adding new patterns.
