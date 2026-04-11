@@ -1,6 +1,7 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
 import { formatCurrency, formatDate } from "../../util/format";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Lista de gastos compartidos o estado vacío
@@ -29,7 +30,7 @@ function renderEmptyState(avatarHtml: string): string {
   return `
     <div class="flex flex-col min-h-screen -mt-4">
       <header class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">💰 Mis Gastos</h1>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("wallet", "w-6 h-6")} Mis Gastos</h1>
         <button onclick="setView('profile')" aria-label="Mi perfil">${avatarHtml}</button>
       </header>
 
@@ -49,9 +50,9 @@ function renderEmptyState(avatarHtml: string): string {
 
           <button
             id="create-first-shared-expense"
-            class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+            class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
           >
-            Crear Primer Gasto Compartido
+            ${icon("folder-plus", "w-5 h-5")} Crear Primer Gasto Compartido
           </button>
         </div>
       </div>
@@ -63,7 +64,7 @@ function renderList(sharedExpenses: any[], store: AppStore, avatarHtml: string):
   return `
     <header class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">💰 Mis Gastos</h1>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("wallet", "w-6 h-6")} Mis Gastos</h1>
         <p class="text-sm text-gray-500">Gestiona tus gastos compartidos</p>
       </div>
       <button onclick="setView('profile')" aria-label="Mi perfil">${avatarHtml}</button>
@@ -71,9 +72,9 @@ function renderList(sharedExpenses: any[], store: AppStore, avatarHtml: string):
 
     <button
       id="create-new-shared-expense"
-      class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium mb-6 hover:bg-blue-700 transition"
+      class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium mb-6 hover:bg-blue-700 transition flex items-center justify-center gap-2"
     >
-      + Crear Nuevo Gasto Compartido
+      ${icon("folder-plus", "w-5 h-5")} Crear Nuevo Gasto Compartido
     </button>
 
     <div id="shared-expense-list" class="space-y-4">
@@ -97,7 +98,7 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
         <div class="flex justify-between items-start mb-2">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm">📬</span>
+              ${icon("mail", "w-4 h-4 text-amber-600")}
               <span class="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                 Invitación pendiente
               </span>
@@ -112,7 +113,7 @@ function renderSharedExpenseCard(sharedExpense: any, store: AppStore): string {
         </div>
 
         <div class="flex justify-between items-center text-sm text-gray-600 mt-3">
-          <span>👥 ${participantCount} participante${participantCount !== 1 ? "s" : ""}</span>
+          <span class="flex items-center gap-1">${icon("users", "w-4 h-4")} ${participantCount} participante${participantCount !== 1 ? "s" : ""}</span>
           <span class="text-xs text-amber-600 font-medium">Toca para ver →</span>
         </div>
       </div>

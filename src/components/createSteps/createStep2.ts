@@ -5,6 +5,7 @@ import {
   renderAddContactForm,
   setupAddContactForm,
 } from "../shared/addContactForm";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Step 2 of the wizard - participant selection
@@ -53,9 +54,9 @@ export default function renderCreateStep2(
   return `
     <div class="mb-6">
       <button id="back-to-step-1" class="text-blue-600 flex items-center gap-1 mb-4">
-        ← Volver
+        ${icon("arrow-left", "w-4 h-4")} Volver
       </button>
-      <h1 class="text-2xl font-bold text-gray-800">Crear Gasto Compartido</h1>
+      <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("folder-plus", "w-6 h-6")} Crear Gasto Compartido</h1>
       <p class="text-gray-600">Paso 2 de 3: Selecciona participantes</p>
     </div>
 
@@ -92,9 +93,9 @@ export default function renderCreateStep2(
     <button
       id="continue-to-step-3"
       ${selectedCount < 2 ? "disabled" : ""}
-      class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+      class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
     >
-      Continuar
+      Continuar ${icon("chevron-right", "w-4 h-4")}
     </button>
   `;
 }

@@ -1,5 +1,6 @@
 import type { Debt, SharedExpenseParticipant } from "../../types";
 import { formatCurrency } from "../../util/format";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Suggested debts to settle
@@ -15,7 +16,7 @@ export default function renderDebtList(
 
   return `
     <div class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-lg font-semibold mb-3">Cómo Saldar Cuentas</h2>
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">${icon("handshake", "w-5 h-5")} Cómo Saldar Cuentas</h2>
       <div class="space-y-2">
         ${debts.map((debt) => renderDebtItem(debt, participants)).join("")}
       </div>

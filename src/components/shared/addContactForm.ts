@@ -1,4 +1,5 @@
 import { showToast } from "../../util/toast";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Collapsible add-contact form (email + optional name).
@@ -12,7 +13,7 @@ export function renderAddContactForm(formId: string): string {
         id="${formId}-toggle"
         class="flex items-center gap-1 text-sm text-blue-600 font-medium hover:text-blue-800 transition"
       >
-        + Agregar contacto
+        ${icon("user-plus", "w-4 h-4")} Agregar contacto
       </button>
 
       <div id="${formId}-fields" class="hidden mt-3 space-y-2">
@@ -32,16 +33,16 @@ export function renderAddContactForm(formId: string): string {
           <div class="flex gap-2">
             <button
               type="submit"
-              class="flex-1 bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
+              class="flex-1 bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-1"
             >
-              Agregar
+              ${icon("check", "w-4 h-4")} Agregar
             </button>
             <button
               type="button"
               id="${formId}-cancel"
-              class="flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm font-medium hover:bg-gray-200 transition"
+              class="flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm font-medium hover:bg-gray-200 transition flex items-center justify-center gap-1"
             >
-              Cancelar
+              ${icon("x", "w-4 h-4")} Cancelar
             </button>
           </div>
         </form>

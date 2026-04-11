@@ -1,5 +1,6 @@
 import type AppState from "../../state/AppState";
 import type AppStore from "../../store";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Paso 1 del wizard - Información básica
@@ -9,13 +10,13 @@ export default function renderCreateStep1(state: AppState): string {
 
   return `
     <div class="mb-6">
-      <button 
-        id="back-to-list" 
+      <button
+        id="back-to-list"
         class="text-blue-600 flex items-center gap-1 mb-4"
       >
-        ← Volver
+        ${icon("arrow-left", "w-4 h-4")} Volver
       </button>
-      <h1 class="text-2xl font-bold text-gray-800">Crear Gasto Compartido</h1>
+      <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("folder-plus", "w-6 h-6")} Crear Gasto Compartido</h1>
       <p class="text-gray-600">Paso 1 de 3: Información básica</p>
     </div>
 
@@ -82,11 +83,11 @@ export default function renderCreateStep1(state: AppState): string {
           </div>
         </div>
 
-        <button 
-          type="submit" 
-          class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
         >
-          Continuar
+          Continuar ${icon("chevron-right", "w-4 h-4")}
         </button>
       </form>
     </div>

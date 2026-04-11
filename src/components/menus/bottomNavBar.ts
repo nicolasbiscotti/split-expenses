@@ -1,5 +1,6 @@
 import type AppState from "../../state/AppState";
 import type { SharedExpense } from "../../types";
+import { icon } from "../../util/icons";
 
 /**
  * Render: Navegación inferior fija
@@ -18,46 +19,46 @@ export default function bottomNavBar(
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
       <div class="max-w-lg mx-auto flex justify-around py-3">
         
-        <button 
-          onclick="setView('dashboard')" 
-          class="flex flex-col items-center ${
+        <button
+          onclick="setView('dashboard')"
+          class="flex flex-col items-center gap-1 ${
             currentView === "dashboard" ? "text-blue-600" : "text-gray-600"
           }"
         >
-          <span class="text-2xl">📊</span>
+          ${icon("layout-dashboard", "w-6 h-6")}
           <span class="text-xs">Dashboard</span>
         </button>
-        
-        <button 
-          onclick="setView('add-expense')" 
-          class="flex flex-col items-center ${
+
+        <button
+          onclick="setView('add-expense')"
+          class="flex flex-col items-center gap-1 ${
             currentView === "add-expense" ? "text-blue-600" : "text-gray-600"
-          }" 
+          } ${isClosed ? "opacity-40" : ""}"
           ${isClosed ? "disabled" : ""}
         >
-          <span class="text-2xl ${isClosed ? "opacity-50" : ""}">➕</span>
-          <span class="text-xs ${isClosed ? "opacity-50" : ""}">Gasto</span>
+          ${icon("plus-square", "w-6 h-6")}
+          <span class="text-xs">Gasto</span>
         </button>
 
-        <button 
-          onclick="setView('add-payment')" 
-          class="flex flex-col items-center ${
+        <button
+          onclick="setView('add-payment')"
+          class="flex flex-col items-center gap-1 ${
             currentView === "add-payment" ? "text-blue-600" : "text-gray-600"
-          }" 
+          } ${isClosed ? "opacity-40" : ""}"
           ${isClosed ? "disabled" : ""}
         >
-          <span class="text-2xl ${isClosed ? "opacity-50" : ""}">💸</span>
-          <span class="text-xs ${isClosed ? "opacity-50" : ""}">Pago</span>
+          ${icon("arrow-right-left", "w-6 h-6")}
+          <span class="text-xs">Pago</span>
         </button>
-        
+
         <button
           onclick="setView('history')"
-          class="flex flex-col items-center ${
+          class="flex flex-col items-center gap-1 ${
             currentView === "history" ? "text-blue-600" : "text-gray-600"
           }"
         >
           <span class="relative inline-block">
-            <span class="text-2xl">📜</span>
+            ${icon("clock", "w-6 h-6")}
             ${unreadCount > 0
               ? `<span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1rem] h-4 flex items-center justify-center px-1">
                    ${unreadCount > 9 ? "9+" : unreadCount}
