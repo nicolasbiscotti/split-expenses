@@ -28,18 +28,16 @@ export default function renderSharedExpenseList(
 
 function renderEmptyState(avatarHtml: string): string {
   return `
-    <div class="flex flex-col min-h-screen -mt-4">
-      <header class="flex justify-between items-center mb-6">
+    <div class="flex flex-col gap-8">
+      <header class="flex justify-between items-center">
         <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">${icon("wallet", "w-6 h-6")} Mis Gastos</h1>
         <button onclick="setView('profile')" aria-label="Mi perfil">${avatarHtml}</button>
       </header>
 
-      <div class="flex flex-col items-center justify-center flex-1">
-        <div class="text-center mb-8">
-          <p class="text-gray-600 mb-8">Aún no tienes gastos compartidos</p>
-        </div>
+      <div class="flex flex-col items-center gap-6">
+        <p class="text-gray-500 text-center">Aún no tienes gastos compartidos</p>
 
-        <div class="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full">
           <h3 class="font-semibold text-lg mb-3">¿Cómo funciona?</h3>
           <ul class="space-y-2 text-sm text-gray-600 mb-6">
             <li>✓ Crea un gasto compartido</li>
