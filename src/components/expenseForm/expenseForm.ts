@@ -3,6 +3,7 @@ import type AppStore from "../../store";
 import type { Expense } from "../../types";
 import { showToast } from "../../util/toast";
 import { renderExpenseList } from "../history/expenseList";
+import { setupCurrencyInput } from "../../util/currencyInput";
 
 /**
  * Render: Expense form + expense list
@@ -36,15 +37,18 @@ export default function renderExpenseForm(
 
         <div>
           <label class="block text-sm font-medium mb-1">Monto</label>
-          <input
-            type="number"
-            name="amount"
-            step="0.01"
-            min="0.01"
-            required
-            class="w-full p-2 border rounded"
-            placeholder="0.00"
-          >
+          <div class="relative">
+            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 font-medium pointer-events-none">$</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              name="amount"
+              required
+              class="w-full p-2 pl-6 border rounded"
+              placeholder="0,00"
+              autocomplete="off"
+            >
+          </div>
         </div>
 
         <div>
@@ -90,6 +94,8 @@ export function setupExpenseForm(
 ): void {
   const cancelButton = form.querySelector<HTMLButtonElement>("#cancel-expense");
   const submitButton = form.querySelector<HTMLButtonElement>('[type="submit"]');
+  const amountInput = form.querySelector<HTMLInputElement>('[name="amount"]');
+  const getAmount = amountInput ? setupCurrencyInput(amountInput) : () => NaN;
 
   cancelButton?.addEventListener("click", () => state.goToDashboard(store));
 
@@ -99,6 +105,12 @@ export function setupExpenseForm(
     const currentSharedExpenseId = store.getCurrentSharedExpenseId();
     if (!currentSharedExpenseId) {
       showToast("No hay un gasto compartido seleccionado", "error");
+      return;
+    }
+
+    const amount = getAmount();
+    if (isNaN(amount) || amount <= 0) {
+      showToast("Ingresa un monto válido", "error");
       return;
     }
 
@@ -113,7 +125,7 @@ export function setupExpenseForm(
         {
           sharedExpenseId: currentSharedExpenseId,
           paidByEmail: formData.get("paidByEmail") as string,
-          amount: parseFloat(formData.get("amount") as string),
+          amount,
           description: formData.get("description") as string,
           date: new Date().toISOString(),
         } as Expense,
