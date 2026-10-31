@@ -44,7 +44,7 @@ jobs:
           VITE_FIRESTORE_DATA_ID: ${{ secrets.VITE_FIRESTORE_PREVIEW_DATA_ID }}
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+        run: npm install -g vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
