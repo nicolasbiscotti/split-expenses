@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Keep this file to durable guidance. Session progress, feature status, and next steps go in `docs/sessions/` and GitHub issues, never here.
+
 ## Commands
 
 ```bash
@@ -62,6 +64,20 @@ View-based routing via `ViewType` enum — no URL routing. Navigate with `state.
 
 Balance and debt simplification logic lives in `src/util/calculations.ts`. The debt simplification algorithm minimizes the number of transfers needed to settle all balances.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`gh` CLI); `docs/issues/` is a frozen archive referenced as `L-NNN`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 ## Language Convention
 
 Code and comments must be in English. The UI (user-facing strings in HTML templates) must be in Spanish. Migrate existing Spanish comments to English as files are modified.
@@ -99,7 +115,7 @@ The app maintains a constant set of 4 Firestore `onSnapshot` listeners while a u
 
 | Listener | Scope | Purpose |
 |----------|-------|---------|
-| SE collection | `participantEmails array-contains email` | Detect new group invites in real time |
+| SE collection | `participantEmails array-contains email` | Detect new Invites in real time |
 | SE document | Current SE only | Keep `totalAmount`, `netPaid`, `expensesCount` fresh |
 | Expenses sub-collection | Current SE, `limit(expensesLimit)` | Authoritative expense list + badge + toasts |
 | Payments sub-collection | Current SE, `limit(paymentsLimit)` | Authoritative payment list + badge + toasts |
