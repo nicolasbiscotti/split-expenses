@@ -27,18 +27,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Vite project
-        run: pnpm build        
-      # Vite projects may need environment variables during build
-        env:  
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      - name: Type-check
+        run: pnpm typecheck
 
-          VITE_FIRESTORE_DATA_ID: ${{ secrets.VITE_FIRESTORE_PROD_DATA_ID }}
+      - name: Run unit tests
+        run: pnpm test
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
