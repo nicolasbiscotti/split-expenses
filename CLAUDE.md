@@ -9,6 +9,7 @@ Keep this file to durable guidance. Session progress, feature status, and next s
 ```bash
 pnpm dev          # Start Vite development server
 pnpm build        # TypeScript check + Vite build
+pnpm typecheck    # TypeScript check only (run by CI before deploying)
 pnpm preview      # Preview production build
 pnpm test         # Run all unit tests (single pass)
 pnpm test:watch   # Run tests in watch mode

@@ -48,6 +48,8 @@ pnpm dev
 |---|---|
 | `pnpm dev` | Start Vite development server |
 | `pnpm build` | TypeScript check + production build |
+| `pnpm typecheck` | TypeScript check only |
+| `pnpm test` | Run unit tests (single pass) |
 | `pnpm preview` | Preview the production build locally |
 
 ## Environment Variables
