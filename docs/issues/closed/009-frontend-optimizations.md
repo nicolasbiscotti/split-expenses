@@ -6,7 +6,7 @@
 
 ## Context
 
-Identified in `docs/shared-expenses-revised.md` (Frontend Optimization section) and surfaced during the analysis for #006. The bounded `onSnapshot` pattern is a hard prerequisite for the notification system (#010) — introducing unbounded listeners would burn Firestore quota and degrade performance. The other items are independent but cheap to apply at the same time.
+Identified in `docs/archive/shared-expenses-revised.md` (Frontend Optimization section) and surfaced during the analysis for #006. The bounded `onSnapshot` pattern is a hard prerequisite for the notification system (#010) — introducing unbounded listeners would burn Firestore quota and degrade performance. The other items are independent but cheap to apply at the same time.
 
 ## Items
 

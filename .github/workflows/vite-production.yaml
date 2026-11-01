@@ -23,8 +23,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3 
-        with:
-          version: 'latest'
 
       - name: Install dependencies
         run: pnpm install
@@ -43,7 +41,7 @@ jobs:
           VITE_FIRESTORE_DATA_ID: ${{ secrets.VITE_FIRESTORE_PROD_DATA_ID }}
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+        run: npm install -g vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}

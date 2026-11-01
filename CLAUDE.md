@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Keep this file to durable guidance. Session progress, feature status, and next steps go in `docs/sessions/` and GitHub issues, never here.
+
 ## Commands
 
 ```bash
@@ -62,6 +64,20 @@ View-based routing via `ViewType` enum — no URL routing. Navigate with `state.
 
 Balance and debt simplification logic lives in `src/util/calculations.ts`. The debt simplification algorithm minimizes the number of transfers needed to settle all balances.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`gh` CLI); `docs/issues/` is a frozen archive referenced as `L-NNN`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 ## Language Convention
 
 Code and comments must be in English. The UI (user-facing strings in HTML templates) must be in Spanish. Migrate existing Spanish comments to English as files are modified.
@@ -99,7 +115,7 @@ The app maintains a constant set of 4 Firestore `onSnapshot` listeners while a u
 
 | Listener | Scope | Purpose |
 |----------|-------|---------|
-| SE collection | `participantEmails array-contains email` | Detect new group invites in real time |
+| SE collection | `participantEmails array-contains email` | Detect new Invites in real time |
 | SE document | Current SE only | Keep `totalAmount`, `netPaid`, `expensesCount` fresh |
 | Expenses sub-collection | Current SE, `limit(expensesLimit)` | Authoritative expense list + badge + toasts |
 | Payments sub-collection | Current SE, `limit(paymentsLimit)` | Authoritative payment list + badge + toasts |
@@ -113,6 +129,28 @@ All listeners are managed in `store.ts`. `stopInviteListener` and `stopDataListe
 ### Pagination
 
 "Load more" increments `expensesLimit`/`paymentsLimit` and re-attaches the same listener (N+1 limit trick to detect `hasMore`).
+
+## Icon System
+
+Icons are provided by [Lucide](https://lucide.dev/) via `src/util/icons.ts`.
+
+- **In templates:** use the `icon(name, cls?)` helper — emits `<i data-lucide="icon-name" class="...">` placeholder strings (kebab-case icon name).
+- **After render:** `render.ts` calls `renderIcons()` immediately after every `innerHTML` update. This replaces all `<i data-lucide>` placeholders with inline SVGs.
+- **Dynamic icon swaps** (e.g. loading state on a delete button): set `btn.innerHTML = icon(...)` then call `renderIcons()` again — already-replaced SVGs are not double-processed.
+- **Adding a new icon:** import it from `lucide` in `icons.ts` and add it to `ICON_SET`.
+
+Icon sizes: `w-6 h-6` in the bottom nav, `w-5 h-5` in section headers, `w-4 h-4` in buttons and inline actions.
+
+## Currency Input
+
+Money form fields use `type="text"` + `inputmode="decimal"` (not `type="number"`) to enable ARS locale formatting.
+
+- **`src/util/currencyInput.ts`** — three pure exported functions:
+  - `parseCurrencyInput(raw)` — parses es-AR formatted strings or US-format fallback to a float
+  - `formatForDisplay(value)` — formats a number as `"1.500,50"` (no currency symbol)
+  - `formatWhileTyping(raw)` — progressive format on each keystroke; caps decimal at 2 digits
+- **`setupCurrencyInput(input)`** — attaches `input`/`blur` listeners; returns a `getValue()` accessor for use in submit handlers instead of `parseFloat(formData.get(...))`.
+- The `$` sign is shown inside the field via absolute positioning (`relative` wrapper + `absolute left-2` span + `pl-6` on the input).
 
 ## Reference Docs
 

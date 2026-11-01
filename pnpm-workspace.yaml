@@ -1,0 +1,6 @@
+# Dependency build scripts are not needed: esbuild ships its binary as an
+# optional dependency, and the protobufjs/@firebase/util scripts are optional.
+allowBuilds:
+  "@firebase/util": false
+  esbuild: false
+  protobufjs: false
