@@ -1,3 +1,32 @@
+# Environment variables
+
+## This project's environments
+
+Each environment has its own Firebase project (ADR 0003). The `environments/{dataId}/` prefix stays, with one fixed `VITE_FIRESTORE_DATA_ID` per project.
+
+| Environment | Firebase project | `VITE_FIRESTORE_DATA_ID` | Where the config lives | Sign-in domain |
+|-------------|------------------|--------------------------|------------------------|----------------|
+| Local | none (emulator) | anything, e.g. `development` | `.env.local` | `localhost` (Auth emulator) |
+| Preview | `split-expenses-dev` | `preview` | Vercel **Preview** env vars; local copy in `.env.preview.local` | `split-expenses-preview.vercel.app` only |
+| Production | `chat-room-658e3` | `split-expenses-production` | Vercel **Production** env vars | the production domain only |
+
+The variables are listed in `.env.example`. All `VITE_FIREBASE_*` values are the Firebase web config, which ships in the browser bundle, so they are public by design (Vercel type `Config`, not `Secret`).
+
+- **Emulator.** `src/firebase/config.ts` connects to the emulator whenever `location.hostname` is `localhost`. `VITE_USE_FIREBASE_EMULATORS` is not read by the code; it is kept only for documentation.
+- **Preview sign-in.** Firebase authorized domains don't accept wildcards, so Google sign-in works only on the fixed preview alias, never on per-deploy preview URLs.
+- **Changing Vercel variables.** Changes reach only new builds. Each variable is scoped to exactly one of Preview or Production; never share a variable between them. With the Vercel CLI:
+
+  ```bash
+  vercel env ls
+  vercel env rm VITE_FIREBASE_PROJECT_ID --environment preview --yes
+  vercel env add VITE_FIREBASE_PROJECT_ID --environment preview --type config --value split-expenses-dev --yes
+  ```
+
+  Then rebuild the preview by pushing to a PR or running the pipeline by hand (`gh workflow run pipeline.yml --ref <branch>`).
+- **Dev project web config.** `firebase apps:sdkconfig WEB --project split-expenses-dev`.
+
+The rest of this file is a general shell reference for environment variables.
+
 ## 1. **Individual Environment Variables**
 
 ### Create/Set Variables:
