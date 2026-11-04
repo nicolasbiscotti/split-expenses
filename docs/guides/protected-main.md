@@ -7,7 +7,7 @@ What enforces it:
 | Layer | File / place | What it does |
 |-------|--------------|--------------|
 | GitHub ruleset | `.github/rulesets/main.json` (applied by hand) | PR required, green `check` required, no force-push, no deletion, squash only, no bypass |
-| Repo settings | GitHub → Settings → General (set by hand) | Squash merging only, PR title as the commit title, head branches deleted after merge |
+| Repo settings | GitHub → Settings → General (set by hand) | Squash merging only, PR title and description as the commit title and body, head branches deleted after merge |
 | Claude Code deny rules | `.claude/settings.json` | Block the literal shapes of: pushing to `main`, merging a PR (`gh pr merge`, the merge REST/GraphQL calls), writing rulesets or branch protection with `gh api`, and changing repo settings (`gh repo edit`, `gh api` with a method on the repo root) |
 | Claude Code hook | `.claude/hooks/guard-hook.mjs` (logic in `guard.mjs`) | Parses each Bash command and blocks any `git push` whose destination is `main`: explicit refspecs, `HEAD`/`@` or no refspec while on `main`, `-C <dir>`, `cd <dir> &&`, `--all`/`--mirror`. Also blocks `gh api graphql` with a query from a file or stdin, and `gh api` writes to the repo root |
 
@@ -75,7 +75,7 @@ gh repo edit \
   --enable-squash-merge --enable-merge-commit=false --enable-rebase-merge=false \
   --delete-branch-on-merge
 gh api --method PATCH repos/{owner}/{repo} \
-  -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=BLANK
+  -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY
 ```
 
 ## Emergency: getting a change onto `main` without the rules
