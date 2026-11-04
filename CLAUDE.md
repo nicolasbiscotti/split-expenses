@@ -155,4 +155,4 @@ Money form fields use `type="text"` + `inputmode="decimal"` (not `type="number"`
 
 ## Reference Docs
 
-`docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, and custom events — consult these before adding new patterns.
+`docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, custom events, and the protected-`main` PR flow (`protected-main.md`) — consult these before adding new patterns.
