@@ -52,7 +52,23 @@
       "Bash(gh api *branches/*/protection* --input*)",
       "Bash(gh api *--input*branches/*/protection*)",
 
-      "Bash(gh repo edit*)"
+      "Bash(gh repo edit*)",
+      "Bash(gh api *-X*repos/{owner}/{repo})",
+      "Bash(gh api *-X*repos/{owner}/{repo}/)",
+      "Bash(gh api *-X*repos/{owner}/{repo} *)",
+      "Bash(gh api *repos/{owner}/{repo} *-X*)",
+      "Bash(gh api *--method*repos/{owner}/{repo})",
+      "Bash(gh api *--method*repos/{owner}/{repo}/)",
+      "Bash(gh api *--method*repos/{owner}/{repo} *)",
+      "Bash(gh api *repos/{owner}/{repo} *--method*)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses/)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses *)",
+      "Bash(gh api *repos/nicolasbiscotti/split-expenses *-X*)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses/)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses *)",
+      "Bash(gh api *repos/nicolasbiscotti/split-expenses *--method*)"
     ]
   },
   "hooks": {
