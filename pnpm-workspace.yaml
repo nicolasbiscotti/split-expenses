@@ -4,3 +4,7 @@ allowBuilds:
   "@firebase/util": false
   esbuild: false
   protobufjs: false
+
+# Only install versions published at least 7 days ago (in minutes), matching
+# Dependabot's cooldown, so a fresh release has time to be yanked if bad.
+minimumReleaseAge: 10080
