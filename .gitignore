@@ -144,3 +144,7 @@ scripts/firebase-admin-sdk/migration-mapping.json
 # Firestore backup exports
 backup-data/
 
+
+# Claude Code: commit the shared settings.json only
+.claude/worktrees/
+.claude/settings.local.json
