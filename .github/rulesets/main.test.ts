@@ -22,10 +22,10 @@ describe("main ruleset", () => {
   });
 
   it("requires a PR with no approvals, squash merge only", () => {
-    expect(rule("pull_request")?.parameters).toMatchObject({
-      required_approving_review_count: 0,
-      allowed_merge_methods: ["squash"],
-    });
+    const params = rule("pull_request")?.parameters;
+    expect(params).toMatchObject({ required_approving_review_count: 0 });
+    // Exactly squash: a "merge" or "rebase" entry must fail the test.
+    expect(params?.allowed_merge_methods).toEqual(["squash"]);
   });
 
   it("requires a green `check` from GitHub Actions, without up-to-date branches", () => {
