@@ -103,6 +103,7 @@ For every new feature or bug fix:
 ### What to test
 
 - **Unit tests** (`src/**/*.test.ts`) — pure functions with no side effects: calculation utilities, notification builders, transformation logic. These run without Firebase.
+- **Repo config and tooling tests** (`.github/**/*.test.ts`, `.claude/hooks/*.test.ts`) — guard committed config such as the `main` ruleset, and the pure decision logic of Claude Code hooks (plain Node ESM with JSDoc types, so hooks run without a build).
 - **Firestore rules tests** (deferred to #014) — `@firebase/rules-unit-testing` against the emulator.
 - Do **not** unit test `onSnapshot` wiring, Firestore service calls, or render functions — integration concerns.
 
@@ -155,4 +156,6 @@ Money form fields use `type="text"` + `inputmode="decimal"` (not `type="number"`
 
 ## Reference Docs
 
-`docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, custom events, and the protected-`main` PR flow (`protected-main.md`) — consult these before adding new patterns.
+`docs/architecture/` contains architecture guides and component pattern examples (10 patterns). `docs/guides/` contains environment variable handling, Firebase emulator setup, and custom events — consult these before adding new patterns.
+
+`docs/guides/protected-main.md` covers the PR flow into `main` and what blocks agents from bypassing it; read it before touching branch protection, the ruleset, or `.claude/settings.json`.
