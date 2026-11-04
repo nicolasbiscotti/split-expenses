@@ -3,5 +3,8 @@
   "outputDirectory": "dist",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
-  "framework": "vite"
+  "framework": "vite",
+  "git": {
+    "deploymentEnabled": false
+  }
 }

@@ -22,6 +22,7 @@ A web application for tracking and settling shared expenses among a group of peo
 | Build | Vite 7 |
 | Styles | Tailwind CSS 4 |
 | Backend | Firebase / Firestore |
+| Runtime | Node.js 26 (pinned in `.nvmrc`) |
 | Package manager | pnpm |
 
 ## Getting Started
@@ -31,7 +32,8 @@ A web application for tracking and settling shared expenses among a group of peo
 git clone <repo-url>
 cd split-expenses
 
-# 2. Install dependencies
+# 2. Use the pinned Node version and install dependencies
+nvm use   # reads .nvmrc (Node 26)
 pnpm install
 
 # 3. Configure environment

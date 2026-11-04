@@ -1,0 +1,169 @@
+# Single CI/CD pipeline with one gate, `check` (ADR 0002).
+#
+# - Every push to a PR runs `check` once; a green `check` deploys a preview.
+# - A merge to `main` re-runs `check` on the merged commit; a green `check`
+#   deploys production.
+# - Dependabot and fork PRs get `check` only: their runs have no secrets.
+# - A branch without a PR gets no preview. Open a draft PR, or run this
+#   workflow manually (workflow_dispatch) to get one.
+name: Pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One run per PR (or ref) at a time. A new push to a PR cancels the stale run.
+# On `main` a running deploy is never cancelled, but GitHub keeps only one
+# pending run per group: a newer merge replaces a run that is still waiting.
+# So intermediate commits on `main` may be skipped, but the latest always ships.
+concurrency:
+  group: pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # The fixed alias is the only domain authorized for Google sign-in in the
+  # dev Firebase project (ADR 0003); raw preview URLs can't sign in.
+  PREVIEW_ALIAS: split-expenses-preview.vercel.app
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-24.04
+    # No secrets here, so `check` also passes on Dependabot and fork runs.
+    # The smoke test from ADR 0002 is not yet part of `check`; tracked in #31.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  preview:
+    name: preview
+    needs: check
+    # Manual runs, and PRs from this repository only. Never for Dependabot or
+    # fork PRs: their runs have no secrets.
+    if: >-
+      github.actor != 'dependabot[bot]'
+      && (github.event_name == 'workflow_dispatch'
+        || (github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The Vercel CLI reads VERCEL_TOKEN from the environment; it is scoped
+      # to the Vercel steps only.
+      - name: Pull Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec vercel pull --yes --environment=preview
+
+      - name: Build project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec vercel build
+
+      - name: Deploy with prebuilt output
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url="$(pnpm exec vercel deploy --prebuilt)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Point preview alias at this deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        run: pnpm exec vercel alias set "$DEPLOY_URL" "$PREVIEW_ALIAS"
+
+  production:
+    name: production
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    # This job has no test steps of its own, on purpose. Its safety comes from
+    # `check` (which it needs, re-run on the merged commit) plus the ruleset
+    # on `main` (every commit arrives through a PR that passed `check`).
+    # Do not remove that protection without bringing back a gate (ADR 0002).
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The Vercel CLI reads VERCEL_TOKEN from the environment; it is scoped
+      # to the Vercel steps only.
+      - name: Pull Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec vercel pull --yes --environment=production
+
+      - name: Build project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec vercel build --prod
+
+      - name: Deploy with prebuilt output
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm exec vercel deploy --prebuilt --prod
