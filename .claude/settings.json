@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push * +main)",
+      "Bash(git push * +main *)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(git push *refs/heads/main)",
+      "Bash(git push *refs/heads/main *)",
+      "Bash(git push --all*)",
+      "Bash(git push * --all*)",
+      "Bash(git push --mirror*)",
+      "Bash(git push * --mirror*)",
+
+      "Bash(gh pr merge*)",
+      "Bash(gh api *pulls/*/merge*)",
+      "Bash(gh api graphql *mergePullRequest*)",
+      "Bash(gh api graphql *PullRequestAutoMerge*)",
+      "Bash(gh api graphql *RepositoryRuleset*)",
+      "Bash(gh api graphql *BranchProtectionRule*)",
+
+      "Bash(gh api *rulesets* -X*)",
+      "Bash(gh api *-X*rulesets*)",
+      "Bash(gh api *rulesets* --method*)",
+      "Bash(gh api *--method*rulesets*)",
+      "Bash(gh api *rulesets* -f*)",
+      "Bash(gh api *-f *rulesets*)",
+      "Bash(gh api *rulesets* -F*)",
+      "Bash(gh api *-F *rulesets*)",
+      "Bash(gh api *rulesets* --field*)",
+      "Bash(gh api *--field*rulesets*)",
+      "Bash(gh api *rulesets* --raw-field*)",
+      "Bash(gh api *--raw-field*rulesets*)",
+      "Bash(gh api *rulesets* --input*)",
+      "Bash(gh api *--input*rulesets*)",
+
+      "Bash(gh api *branches/*/protection* -X*)",
+      "Bash(gh api *-X*branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* --method*)",
+      "Bash(gh api *--method*branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* -f*)",
+      "Bash(gh api *-f *branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* -F*)",
+      "Bash(gh api *-F *branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* --field*)",
+      "Bash(gh api *--field*branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* --raw-field*)",
+      "Bash(gh api *--raw-field*branches/*/protection*)",
+      "Bash(gh api *branches/*/protection* --input*)",
+      "Bash(gh api *--input*branches/*/protection*)",
+
+      "Bash(gh repo edit*)",
+      "Bash(gh api *-X*repos/{owner}/{repo})",
+      "Bash(gh api *-X*repos/{owner}/{repo}/)",
+      "Bash(gh api *-X*repos/{owner}/{repo} *)",
+      "Bash(gh api *repos/{owner}/{repo} *-X*)",
+      "Bash(gh api *--method*repos/{owner}/{repo})",
+      "Bash(gh api *--method*repos/{owner}/{repo}/)",
+      "Bash(gh api *--method*repos/{owner}/{repo} *)",
+      "Bash(gh api *repos/{owner}/{repo} *--method*)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses/)",
+      "Bash(gh api *-X*repos/nicolasbiscotti/split-expenses *)",
+      "Bash(gh api *repos/nicolasbiscotti/split-expenses *-X*)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses/)",
+      "Bash(gh api *--method*repos/nicolasbiscotti/split-expenses *)",
+      "Bash(gh api *repos/nicolasbiscotti/split-expenses *--method*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-hook.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

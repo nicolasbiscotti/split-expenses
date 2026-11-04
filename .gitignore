@@ -144,3 +144,10 @@ scripts/firebase-admin-sdk/migration-mapping.json
 # Firestore backup exports
 backup-data/
 
+# Claude Code: shared settings and hooks are committed; local state is not
+.claude/worktrees/
+.claude/settings.local.json
+# Vercel CLI (added by `vercel link`)
+.vercel
+.env*
+!.env.example
